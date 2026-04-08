@@ -30,18 +30,38 @@
 
 ---
 
+## 현재 스프린트: 라우팅 & 대시보드
+
+### [x] 5. 메인 대시보드 & 부서별 라우팅 구조
+- [x] `react-router-dom` 설치
+- [x] `src/data/departments.js` — 카테고리/부서 데이터 + 컬러 테마
+- [x] `App.jsx` 라우팅 구조 재작성 (BrowserRouter + Routes)
+- [x] 공통 레이아웃 (`AppLayout`, `Header`, `Sidebar`, `Breadcrumb`)
+- [x] `DashboardPage.jsx` — 카테고리 카드 3개 + 통계 요약
+- [x] `CategoryPage.jsx` — 부서 카드 목록
+- [x] `DepartmentPage.jsx` — 빈 페이지 (Coming Soon)
+
+**라우팅 구조**
+| URL | 페이지 |
+|-----|--------|
+| `/` | DashboardPage |
+| `/:categoryId` | CategoryPage |
+| `/:categoryId/:deptId` | DepartmentPage |
+
+---
+
 ## 다음 스프린트: 기능 구현 (미정)
 
-### [ ] 5. HR 모듈
+### [ ] 6. HR 모듈
 - [ ] 채용 공고 생성 API (`POST /api/hr/job-post`)
 - [ ] 면접 질문 생성 API (`POST /api/hr/interview-questions`)
 - [ ] HR 페이지 UI 컴포넌트
 
-### [ ] 6. 마케팅 모듈
+### [ ] 7. 마케팅 모듈
 - [ ] 카피라이팅 API (`POST /api/marketing/copy`)
 - [ ] 콘텐츠 생성 API (`POST /api/marketing/content`)
 
-### [ ] 7. IT 모듈
+### [ ] 8. IT 모듈
 - [ ] 코드 리뷰 API (`POST /api/it/code-review`)
 - [ ] 기술 문서 작성 API (`POST /api/it/doc-generate`)
 
@@ -55,3 +75,4 @@
 | 002 | 2026-04-08 | Frontend Vite+React+TailwindCSS v4 세팅 완료 |
 | 003 | 2026-04-08 | Backend FastAPI 기본 구조 + CORS 설정 완료 |
 | 004 | 2026-04-08 | .env.example 양쪽 생성, CLAUDE.md 복사 완료 |
+| 005 | 2026-04-08 | 메인 대시보드 + 3카테고리/11부서 라우팅 구조 완성 |
