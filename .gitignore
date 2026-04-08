@@ -1,0 +1,59 @@
+# ========================
+# Python / FastAPI (Backend)
+# ========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# 가상환경
+venv/
+.venv/
+env/
+.env/
+
+# ========================
+# 환경변수 (절대 커밋 금지)
+# ========================
+.env
+.env.*
+!.env.example
+
+# ========================
+# Node.js / Vite (Frontend)
+# ========================
+node_modules/
+dist/
+dist-ssr/
+*.local
+.cache/
+
+# ========================
+# 에디터 / IDE
+# ========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ========================
+# 로그 / 임시 파일
+# ========================
+*.log
+logs/
+*.tmp
+*.temp
+
+# ========================
+# Claude Code
+# ========================
+.claude/
