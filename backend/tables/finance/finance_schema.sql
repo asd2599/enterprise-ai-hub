@@ -1,6 +1,6 @@
 -- ============================================================
--- Enterprise AI Hub — ERP 연동 테이블 DDL (PostgreSQL)
--- 실행: psql -U <user> -d <db> -f schema.sql
+-- Enterprise AI Hub — 재무팀 테이블 DDL (PostgreSQL)
+-- 실행: psql -U <user> -d <db> -f tables/finance/finance_schema.sql
 -- ============================================================
 
 -- ────────────────────────────────────────────────────────────

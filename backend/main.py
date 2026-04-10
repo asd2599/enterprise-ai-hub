@@ -1,30 +1,37 @@
 """
-Enterprise AI Hub — Flask 앱 진입점
-실행: python main.py
+Enterprise AI Hub — FastAPI 앱 진입점
+실행: uvicorn main:app --reload
 """
-from flask import Flask, jsonify
-from flask_cors import CORS
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from config import settings
-from routers.finance import finance_bp
+from routers.finance import router as finance_router
 
-app = Flask(__name__)
+app = FastAPI(title="Enterprise AI Hub API")
 
 # CORS — Frontend 도메인만 허용
-CORS(app, origins=[settings.frontend_url])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[settings.frontend_url],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # 라우터 등록
-app.register_blueprint(finance_bp, url_prefix="/api/finance")
+app.include_router(finance_router, prefix="/api/finance")
 
 
 @app.get("/")
 def root():
-    return jsonify({"status": "ok", "message": "Enterprise AI Hub API가 실행 중입니다."})
+    return {"status": "ok", "message": "Enterprise AI Hub API가 실행 중입니다."}
 
 
 @app.get("/health")
 def health():
-    return jsonify({"status": "healthy"})
+    return {"status": "healthy"}
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=settings.port, debug=True)
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=settings.port, reload=True)

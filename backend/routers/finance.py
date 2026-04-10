@@ -3,50 +3,67 @@
 """
 import json
 from datetime import date
-from flask import Blueprint, request, jsonify
+from typing import Optional
 
-from services.openai_service import analyze_receipt
+from fastapi import APIRouter, HTTPException, UploadFile, File, Query
+from pydantic import BaseModel
+
+from services.finance.finance_ocr_service import analyze_receipt
 from database import get_connection
 
-finance_bp = Blueprint("finance", __name__)
+router = APIRouter()
+
+
+# ──────────────────────────────────────────────────────────────
+# 요청 스키마
+# ──────────────────────────────────────────────────────────────
+class TransactionItem(BaseModel):
+    item: str
+    amount: int
+    tax_amount: int
+    account_code: str = "기타비용"
+    memo: str = ""
+    confidence: float = 0.0
+
+
+class SaveTransactionsRequest(BaseModel):
+    receipt_date: Optional[str] = None
+    vendor: str = ""
+    items: list[TransactionItem]
 
 
 # ──────────────────────────────────────────────────────────────
 # POST /api/finance/ocr  — OCR 분석만 (DB 저장 없음)
 # ──────────────────────────────────────────────────────────────
-@finance_bp.post("/ocr")
-def ocr():
+@router.post("/ocr")
+async def ocr(file: UploadFile = File(...)):
     """
-    영수증 파일을 OpenAI로 분석하고 결과를 반환합니다. DB 저장은 하지 않습니다.
+    영수증 파일을 AI로 분석하고 결과를 반환합니다. DB 저장은 하지 않습니다.
 
     Request : multipart/form-data { file }
     Response: { receipt_date, vendor, items: [{ item, amount, tax_amount, account_code, memo, confidence }] }
     """
-    if "file" not in request.files:
-        return jsonify({"error": "file 필드가 없습니다."}), 400
-
-    f = request.files["file"]
-    file_bytes   = f.read()
-    content_type = f.content_type or "image/jpeg"
+    file_bytes = await file.read()
+    content_type = file.content_type or "image/jpeg"
 
     if not file_bytes:
-        return jsonify({"error": "빈 파일입니다."}), 400
+        raise HTTPException(status_code=400, detail="빈 파일입니다.")
 
     try:
         result = analyze_receipt(file_bytes, content_type)
     except Exception as e:
-        return jsonify({"error": f"AI 분석 실패: {str(e)}"}), 502
+        raise HTTPException(status_code=502, detail=f"AI 분석 실패: {str(e)}")
 
     receipt_date = result.get("receipt_date") or str(date.today())
     vendor       = result.get("vendor", "")
     items_raw    = result.get("items", [])
 
     if not items_raw:
-        return jsonify({"error": "영수증에서 항목을 인식하지 못했습니다."}), 422
+        raise HTTPException(status_code=422, detail="영수증에서 항목을 인식하지 못했습니다.")
 
-    return jsonify({
+    return {
         "receipt_date": receipt_date,
-        "vendor":       vendor,
+        "vendor": vendor,
         "items": [
             {
                 "item":         item.get("item", ""),
@@ -60,42 +77,32 @@ def ocr():
             }
             for item in items_raw
         ],
-    }), 200
+    }
 
 
 # ──────────────────────────────────────────────────────────────
 # POST /api/finance/transactions  — 분석 결과를 DB에 저장
 # ──────────────────────────────────────────────────────────────
-@finance_bp.post("/transactions")
-def save_transactions():
+@router.post("/transactions", status_code=201)
+def save_transactions(body: SaveTransactionsRequest):
     """
     OCR 분석 결과(사용자가 수정 가능)를 DB에 저장합니다.
 
-    Request : application/json
-    {
-      "receipt_date": "YYYY-MM-DD",
-      "vendor": "거래처명",
-      "items": [{ item, amount, tax_amount, account_code, memo, confidence }]
-    }
+    Request : application/json { receipt_date, vendor, items: [...] }
     Response: { saved: [{ id, item, amount, ... }] }
     """
-    body = request.get_json(silent=True)
-    if not body or not body.get("items"):
-        return jsonify({"error": "저장할 항목이 없습니다."}), 400
+    if not body.items:
+        raise HTTPException(status_code=400, detail="저장할 항목이 없습니다.")
 
-    receipt_date = body.get("receipt_date") or str(date.today())
-    vendor       = body.get("vendor", "")
-    items        = body["items"]
+    receipt_date = body.receipt_date or str(date.today())
+    vendor       = body.vendor
+    saved        = []
 
     conn = get_connection()
     cur  = conn.cursor()
-    saved = []
 
     try:
-        for item in items:
-            amount     = int(item.get("amount", 0))
-            tax_amount = int(item.get("tax_amount", 0))
-
+        for item in body.items:
             cur.execute(
                 """
                 INSERT INTO transactions
@@ -106,63 +113,63 @@ def save_transactions():
                 """,
                 (
                     receipt_date,
-                    item.get("item", ""),
-                    amount,
-                    tax_amount,
-                    item.get("account_code", "기타비용"),
+                    item.item,
+                    item.amount,
+                    item.tax_amount,
+                    item.account_code,
                     vendor,
-                    item.get("memo", ""),
-                    float(item.get("confidence", 0)),
-                    json.dumps(item, ensure_ascii=False),
+                    item.memo,
+                    item.confidence,
+                    json.dumps(item.model_dump(), ensure_ascii=False),
                 ),
             )
             row = cur.fetchone()
             saved.append({
                 "id":           row[0],
                 "receipt_date": receipt_date,
-                "item":         item.get("item", ""),
-                "amount":       amount,
-                "tax_amount":   tax_amount,
+                "item":         item.item,
+                "amount":       item.amount,
+                "tax_amount":   item.tax_amount,
                 "total_amount": row[1],
-                "account_code": item.get("account_code", "기타비용"),
+                "account_code": item.account_code,
                 "vendor":       vendor,
-                "memo":         item.get("memo", ""),
-                "confidence":   float(item.get("confidence", 0)),
+                "memo":         item.memo,
+                "confidence":   item.confidence,
                 "created_at":   str(row[2]),
             })
 
     except Exception as e:
-        return jsonify({"error": f"DB 저장 실패: {str(e)}"}), 500
+        raise HTTPException(status_code=500, detail=f"DB 저장 실패: {str(e)}")
 
     finally:
         cur.close()
         conn.close()
 
-    return jsonify({"saved": saved}), 201
+    return {"saved": saved}
 
 
 # ──────────────────────────────────────────────────────────────
 # GET /api/finance/transactions  — DB 전표 내역 조회
 # ──────────────────────────────────────────────────────────────
-@finance_bp.get("/transactions")
-def list_transactions():
+@router.get("/transactions")
+def list_transactions(
+    limit:        int            = Query(default=50, le=200),
+    offset:       int            = Query(default=0, ge=0),
+    account_code: Optional[str]  = Query(default=None),
+    date_from:    Optional[str]  = Query(default=None),
+    date_to:      Optional[str]  = Query(default=None),
+):
     """
     DB에 저장된 전표 목록을 반환합니다.
 
     Query params:
-      limit        (int, default 50)
+      limit        (int, default 50, max 200)
       offset       (int, default 0)
       account_code (str, optional) — 계정과목 필터
       date_from    (str YYYY-MM-DD, optional)
       date_to      (str YYYY-MM-DD, optional)
     Response: { total, items: [...] }
     """
-    limit        = min(int(request.args.get("limit", 50)), 200)
-    offset       = int(request.args.get("offset", 0))
-    account_code = request.args.get("account_code")
-    date_from    = request.args.get("date_from")
-    date_to      = request.args.get("date_to")
-
     where_clauses = []
     params = []
 
@@ -182,11 +189,9 @@ def list_transactions():
     cur  = conn.cursor()
 
     try:
-        # 전체 건수
         cur.execute(f"SELECT COUNT(*) FROM transactions {where_sql}", params)
         total = cur.fetchone()[0]
 
-        # 목록 조회
         cur.execute(
             f"""
             SELECT id, receipt_date, item, amount, tax_amount, total_amount,
@@ -201,27 +206,28 @@ def list_transactions():
         rows = cur.fetchall()
 
     except Exception as e:
-        return jsonify({"error": f"조회 실패: {str(e)}"}), 500
+        raise HTTPException(status_code=500, detail=f"조회 실패: {str(e)}")
 
     finally:
         cur.close()
         conn.close()
 
-    items = [
-        {
-            "id":           r[0],
-            "receipt_date": str(r[1]),
-            "item":         r[2],
-            "amount":       r[3],
-            "tax_amount":   r[4],
-            "total_amount": r[5],
-            "account_code": r[6],
-            "vendor":       r[7],
-            "memo":         r[8],
-            "confidence":   float(r[9]) if r[9] else None,
-            "created_at":   str(r[10]),
-        }
-        for r in rows
-    ]
-
-    return jsonify({"total": total, "items": items}), 200
+    return {
+        "total": total,
+        "items": [
+            {
+                "id":           r[0],
+                "receipt_date": str(r[1]),
+                "item":         r[2],
+                "amount":       r[3],
+                "tax_amount":   r[4],
+                "total_amount": r[5],
+                "account_code": r[6],
+                "vendor":       r[7],
+                "memo":         r[8],
+                "confidence":   float(r[9]) if r[9] else None,
+                "created_at":   str(r[10]),
+            }
+            for r in rows
+        ],
+    }

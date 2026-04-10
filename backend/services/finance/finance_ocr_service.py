@@ -1,5 +1,5 @@
 """
-OpenAI Vision 서비스 — 영수증 이미지를 분석해 ERP 호환 JSON 반환
+재무팀 OCR 서비스 — 영수증 이미지를 분석해 ERP 호환 JSON 반환
 """
 import base64
 import json
@@ -63,7 +63,7 @@ def analyze_receipt(file_bytes: bytes, content_type: str) -> dict:
     b64 = base64.b64encode(file_bytes).decode("utf-8")
 
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-4o-mini",
         response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
