@@ -71,7 +71,11 @@ function ToolCard({ tool, theme, onClick }) {
 }
 
 // categoryId, deptId를 props로 받아 렌더링
-function DeptPageLayout({ categoryId, deptId }) {
+function DeptPageLayout({
+  categoryId,
+  deptId,
+  toolGridClassName = 'grid-cols-1 sm:grid-cols-2',
+}) {
   const navigate = useNavigate()
   const cat = CATEGORY_MAP[categoryId]
   const dept = DEPT_MAP[deptId]
@@ -119,7 +123,7 @@ function DeptPageLayout({ categoryId, deptId }) {
 
       {/* 도구 카드 그리드 */}
       {tools.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className={`grid gap-4 ${toolGridClassName}`}>
           {tools.map(tool => (
             <ToolCard
               key={tool.id}

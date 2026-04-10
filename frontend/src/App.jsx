@@ -14,6 +14,7 @@ import HireRequest  from './pages/backoffice/HR/HireRequest'
 import QGenerate    from './pages/backoffice/HR/QGenerate'
 import RegulationChat from './pages/backoffice/HR/RegulationChat'
 import Pay          from './pages/backoffice/HR/Pay'
+import HumanResources from './pages/backoffice/HR/HumanResources'
 import Match        from './pages/backoffice/HR/Match'
 import Evaluate     from './pages/backoffice/HR/Evaluate'
 import AutoManual   from './pages/backoffice/HR/AutoManual'
@@ -54,6 +55,7 @@ function App() {
           <Route path="backoffice/hr/q-generate"     element={<QGenerate />} />
           <Route path="backoffice/hr/regulation-chat" element={<RegulationChat />} />
           <Route path="backoffice/hr/pay"            element={<Pay />} />
+          <Route path="backoffice/hr/humanresources" element={<HumanResources />} />
           <Route path="backoffice/hr/match"          element={<Match />} />
           <Route path="backoffice/hr/evaluate"       element={<Evaluate />} />
           <Route path="backoffice/hr/auto-manual"    element={<AutoManual />} />
