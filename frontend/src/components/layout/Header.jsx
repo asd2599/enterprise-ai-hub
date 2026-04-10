@@ -1,7 +1,11 @@
 // 공통 헤더 컴포넌트 — 로고, 모바일 햄버거 메뉴 포함
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { clearAuthSession, getAuthSession } from '../../api/auth';
+import {
+  clearAuthSession,
+  getAuthSession,
+  refreshAuthSession,
+} from '../../api/auth';
 
 function Header({ onMenuToggle }) {
   const navigate = useNavigate();
@@ -15,6 +19,34 @@ function Header({ onMenuToggle }) {
     window.addEventListener('auth-session-changed', syncSession);
     return () =>
       window.removeEventListener('auth-session-changed', syncSession);
+  }, []);
+
+  useEffect(() => {
+    async function syncProfile() {
+      try {
+        await refreshAuthSession();
+      } catch {
+        // 승인 상태 자동 동기화는 보조 동작이므로 실패 시 화면을 막지 않습니다.
+      }
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        syncProfile();
+      }
+    }
+
+    syncProfile();
+
+    const intervalId = window.setInterval(syncProfile, 5000);
+    window.addEventListener('focus', syncProfile);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', syncProfile);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   function handleLogout() {

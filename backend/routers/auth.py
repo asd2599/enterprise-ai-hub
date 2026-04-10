@@ -57,6 +57,59 @@ class UpdateProfileRequest(BaseModel):
     password: Optional[str] = None
 
 
+class UpdateEmployeeDepartmentRequest(BaseModel):
+    department: str
+
+
+@router.get("/profile/{employee_id}")
+def get_profile(employee_id: str):
+    employee_id = employee_id.strip()
+
+    if not employee_id:
+        raise HTTPException(status_code=400, detail="사번이 비어 있습니다.")
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    try:
+        cur.execute(
+            """
+            SELECT employee_id, name, email, phone_number, birth_date, nickname,
+                   department, position, is_verified, is_active, updated_at
+            FROM info_employees
+            WHERE employee_id = %s
+            """,
+            (employee_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="사원 정보를 찾을 수 없습니다.")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"사원 정보 조회 실패: {str(exc)}")
+    finally:
+        cur.close()
+        conn.close()
+
+    return {
+        "employee": {
+            "employee_id": row[0],
+            "name": row[1],
+            "email": row[2],
+            "phone_number": row[3],
+            "birth_date": row[4].isoformat() if isinstance(row[4], date) else None,
+            "nickname": row[5],
+            "department": row[6],
+            "position": row[7],
+            "is_verified": row[8],
+            "is_active": row[9],
+        },
+        "approval_status": "approved" if row[8] else "pending_approval",
+        "updated_at": str(row[10]),
+    }
+
+
 @router.delete("/reject/{employee_id}")
 def reject_employee(employee_id: str):
     employee_id = employee_id.strip()
@@ -91,6 +144,94 @@ def reject_employee(employee_id: str):
         "employee_id": row[0],
         "name": row[1],
         "message": "가입 요청이 거절되었습니다.",
+    }
+
+
+@router.get("/employees")
+def list_employees():
+    conn = get_connection()
+    cur = conn.cursor()
+
+    try:
+        cur.execute(
+            """
+            SELECT employee_id, name, email, phone_number, birth_date, nickname,
+                   department, position, is_verified, is_active, created_at, updated_at
+            FROM info_employees
+            WHERE is_verified = TRUE
+            ORDER BY department ASC, name ASC
+            """
+        )
+        rows = cur.fetchall()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"사원 목록 조회 실패: {str(exc)}")
+    finally:
+        cur.close()
+        conn.close()
+
+    return {
+        "total": len(rows),
+        "items": [
+            {
+                "employee_id": row[0],
+                "name": row[1],
+                "email": row[2],
+                "phone_number": row[3],
+                "birth_date": row[4].isoformat() if isinstance(row[4], date) else None,
+                "nickname": row[5],
+                "department": row[6],
+                "position": row[7],
+                "is_verified": row[8],
+                "is_active": row[9],
+                "created_at": str(row[10]),
+                "updated_at": str(row[11]),
+            }
+            for row in rows
+        ],
+    }
+
+
+@router.put("/employees/{employee_id}/department")
+def update_employee_department(employee_id: str, body: UpdateEmployeeDepartmentRequest):
+    employee_id = employee_id.strip()
+    department = body.department.strip()
+
+    if not employee_id or not department:
+        raise HTTPException(status_code=400, detail="사번과 변경할 부서는 모두 필수입니다.")
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    try:
+        cur.execute(
+            """
+            UPDATE info_employees
+               SET department = %s,
+                   updated_at = NOW()
+             WHERE employee_id = %s
+               AND is_verified = TRUE
+            RETURNING employee_id, name, department, position, updated_at
+            """,
+            (department, employee_id),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="부서를 변경할 사원 계정을 찾을 수 없습니다.")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"부서 변경 실패: {str(exc)}")
+    finally:
+        cur.close()
+        conn.close()
+
+    return {
+        "employee_id": row[0],
+        "name": row[1],
+        "department": row[2],
+        "position": row[3],
+        "updated_at": str(row[4]),
+        "message": "사원 부서가 변경되었습니다.",
     }
 
 

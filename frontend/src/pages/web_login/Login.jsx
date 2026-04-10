@@ -106,7 +106,7 @@ export default function Login() {
             </div>
             <Link
               to="/register"
-              className="rounded-full border border-blue-200 px-4 py-2 text-sm font-medium text-blue-700 transition hover:border-blue-300 hover:bg-blue-50"
+              className="min-w-[120px] rounded-full border border-blue-200 px-6 py-2 text-center text-sm font-medium text-blue-700 transition hover:border-blue-300 hover:bg-blue-50"
             >
               회원가입
             </Link>

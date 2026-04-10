@@ -1,19 +1,36 @@
-import { useEffect, useMemo, useState } from 'react'
-import Breadcrumb from '../../components/layout/Breadcrumb'
-import { getAuthSession, saveAuthSession, updateMyProfile } from '../../api/auth'
+import { useEffect, useMemo, useState } from 'react';
+import Breadcrumb from '../../components/layout/Breadcrumb';
+import {
+  getAuthSession,
+  getMyProfile,
+  saveAuthSession,
+  updateMyProfile,
+} from '../../api/auth';
 
 const INPUT_CLASSNAME =
-  'w-full rounded-xl border border-fuchsia-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-fuchsia-500 focus:ring-2 focus:ring-fuchsia-200 dark:border-fuchsia-900/60 dark:bg-gray-950 dark:text-white'
+  'w-full rounded-xl border border-fuchsia-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-fuchsia-500 focus:ring-2 focus:ring-fuchsia-200 dark:border-fuchsia-900/60 dark:bg-gray-950 dark:text-white';
 
 function formatBirthDateForApi(value) {
-  if (!value) return null
-  if (value.length !== 8) return null
+  if (!value) return null;
+  if (value.length !== 8) return null;
 
-  return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`
+  return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`;
+}
+
+function toProfileForm(employee) {
+  return {
+    employee_id: employee?.employee_id || '',
+    name: employee?.name || '',
+    email: employee?.email || '',
+    phone_number: employee?.phone_number || '',
+    birth_date: (employee?.birth_date || '').replaceAll('-', ''),
+    nickname: employee?.nickname || '',
+    password: '',
+  };
 }
 
 export default function Setting() {
-  const [session, setSession] = useState(() => getAuthSession())
+  const [session, setSession] = useState(() => getAuthSession());
   const [profileForm, setProfileForm] = useState({
     employee_id: '',
     name: '',
@@ -22,49 +39,80 @@ export default function Setting() {
     birth_date: '',
     nickname: '',
     password: '',
-  })
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-  const [successMessage, setSuccessMessage] = useState('')
+  });
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
-    const currentSession = getAuthSession()
-    setSession(currentSession)
-    setProfileForm({
-      employee_id: currentSession?.employee?.employee_id || '',
-      name: currentSession?.employee?.name || '',
-      email: currentSession?.employee?.email || '',
-      phone_number: currentSession?.employee?.phone_number || '',
-      birth_date: (currentSession?.employee?.birth_date || '').replaceAll('-', ''),
-      nickname: currentSession?.employee?.nickname || '',
-      password: '',
-    })
-  }, [])
+    async function hydrateProfile() {
+      const currentSession = getAuthSession();
+      setSession(currentSession);
+      setError('');
+
+      if (!currentSession?.employee?.employee_id) {
+        setProfileForm(toProfileForm(null));
+        return;
+      }
+
+      setProfileForm(toProfileForm(currentSession.employee));
+      setLoading(true);
+      try {
+        const data = await getMyProfile(currentSession.employee.employee_id);
+        const nextSession = {
+          ...currentSession,
+          employee: {
+            ...currentSession.employee,
+            ...data.employee,
+          },
+          approval_status: data.approval_status,
+        };
+
+        setSession(nextSession);
+        setProfileForm(toProfileForm(data.employee));
+      } catch (fetchError) {
+        setError(fetchError.message || '내 정보를 불러오지 못했습니다.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    hydrateProfile();
+
+    function syncSession() {
+      hydrateProfile();
+    }
+
+    window.addEventListener('auth-session-changed', syncSession);
+    return () =>
+      window.removeEventListener('auth-session-changed', syncSession);
+  }, []);
 
   const approvalLabel = useMemo(() => {
-    if (!session) return ''
-    return session.approval_status === 'approved' ? '승인 완료' : '승인 대기'
-  }, [session])
+    if (!session) return '';
+    return session.approval_status === 'approved' ? '승인 완료' : '승인 대기';
+  }, [session]);
 
   function handleProfileChange(event) {
-    const { name, value } = event.target
+    const { name, value } = event.target;
     const nextValue =
-      name === 'birth_date' ? value.replace(/\D/g, '').slice(0, 8) : value
+      name === 'birth_date' ? value.replace(/\D/g, '').slice(0, 8) : value;
 
-    setProfileForm((prev) => ({ ...prev, [name]: nextValue }))
+    setProfileForm((prev) => ({ ...prev, [name]: nextValue }));
   }
 
   async function handleProfileSubmit(event) {
-    event.preventDefault()
+    event.preventDefault();
 
     if (profileForm.birth_date && profileForm.birth_date.length !== 8) {
-      setError('생년월일은 8자리 숫자로 입력해 주세요.')
-      return
+      setError('생년월일은 8자리 숫자로 입력해 주세요.');
+      return;
     }
 
-    setSaving(true)
-    setError('')
-    setSuccessMessage('')
+    setSaving(true);
+    setError('');
+    setSuccessMessage('');
 
     try {
       const data = await updateMyProfile({
@@ -75,7 +123,7 @@ export default function Setting() {
         birth_date: formatBirthDateForApi(profileForm.birth_date),
         nickname: profileForm.nickname.trim() || null,
         password: profileForm.password.trim() || null,
-      })
+      });
 
       const nextSession = {
         ...session,
@@ -84,16 +132,16 @@ export default function Setting() {
           ...data.employee,
         },
         approval_status: data.approval_status,
-      }
+      };
 
-      saveAuthSession(nextSession)
-      setSession(nextSession)
-      setProfileForm((prev) => ({ ...prev, password: '' }))
-      setSuccessMessage(data.message || '내 정보가 수정되었습니다.')
+      saveAuthSession(nextSession);
+      setSession(nextSession);
+      setProfileForm((prev) => ({ ...prev, password: '' }));
+      setSuccessMessage(data.message || '내 정보가 수정되었습니다.');
     } catch (submitError) {
-      setError(submitError.message || '내 정보 수정 중 오류가 발생했습니다.')
+      setError(submitError.message || '내 정보 수정 중 오류가 발생했습니다.');
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
@@ -103,8 +151,8 @@ export default function Setting() {
 
       <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         <section className="rounded-2xl border border-fuchsia-200 bg-fuchsia-50 p-6 dark:border-fuchsia-900/60 dark:bg-fuchsia-950/20">
-          <span className="text-xs font-semibold uppercase tracking-wider text-fuchsia-600 dark:text-fuchsia-400">
-            Settings
+          <span className="text-xs font-semibold tracking-wider text-fuchsia-600 dark:text-fuchsia-400">
+            My Information
           </span>
           <h1 className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
             내 정보 설정
@@ -120,12 +168,14 @@ export default function Setting() {
                 {session?.employee?.employee_id || '-'}
               </span>
             </div>
-            <div className="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm dark:bg-gray-900">
-              <span className="text-gray-500 dark:text-gray-400">승인 상태</span>
+            {/* <div className="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm dark:bg-gray-900">
+              <span className="text-gray-500 dark:text-gray-400">
+                승인 상태
+              </span>
               <span className="font-medium text-fuchsia-700 dark:text-fuchsia-300">
                 {approvalLabel || '-'}
               </span>
-            </div>
+            </div> */}
             <div className="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm dark:bg-gray-900">
               <span className="text-gray-500 dark:text-gray-400">부서</span>
               <span className="font-medium text-gray-900 dark:text-white">
@@ -150,7 +200,8 @@ export default function Setting() {
               내 정보 수정
             </h2>
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              이름, 이메일, 연락처, 생년월일, 닉네임과 비밀번호를 수정할 수 있습니다.
+              이름, 이메일, 연락처, 생년월일, 닉네임과 비밀번호를 수정할 수
+              있습니다.
             </p>
           </div>
 
@@ -230,21 +281,9 @@ export default function Setting() {
               </label>
             </div>
 
-            {error ? (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {error}
-              </div>
-            ) : null}
-
-            {successMessage ? (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                {successMessage}
-              </div>
-            ) : null}
-
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || loading || !session?.employee?.employee_id}
               className="min-h-[44px] rounded-xl bg-fuchsia-600 px-5 text-sm font-semibold text-white transition hover:bg-fuchsia-700 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
               {saving ? '저장 중...' : '내 정보 저장'}
@@ -252,6 +291,32 @@ export default function Setting() {
           </form>
         </section>
       </div>
+
+      <div className="mt-6 space-y-3">
+        {!session?.employee?.employee_id ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            로그인 후 본인 계정의 DB 정보를 불러와 수정할 수 있습니다.
+          </div>
+        ) : null}
+
+        {loading && !successMessage ? (
+          <div className="rounded-xl border border-fuchsia-100 bg-fuchsia-50 px-4 py-3 text-sm text-fuchsia-700">
+            DB에서 내 정보를 불러오는 중입니다...
+          </div>
+        ) : null}
+
+        {error ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        ) : null}
+
+        {successMessage ? (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            {successMessage}
+          </div>
+        ) : null}
+      </div>
     </div>
-  )
+  );
 }
