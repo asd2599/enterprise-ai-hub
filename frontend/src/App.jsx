@@ -10,6 +10,11 @@ import FinancePage  from './pages/backoffice/FinancePage'
 import LegalPage    from './pages/backoffice/LegalPage'
 import AdminPage    from './pages/backoffice/AdminPage'
 
+// 재무본부 세부 직무
+import AccountantPage from './pages/backoffice/finance/AccountantPage'
+import TreasuryPage   from './pages/backoffice/finance/TreasuryPage'
+import AuditPage      from './pages/backoffice/finance/AuditPage'
+
 // Front-Office
 import StrategyPage  from './pages/frontoffice/StrategyPage'
 import SalesPage     from './pages/frontoffice/SalesPage'
@@ -33,9 +38,14 @@ function App() {
 
           {/* Back-Office 부서 */}
           <Route path="backoffice/hr"      element={<HRPage />} />
-          <Route path="backoffice/finance" element={<FinancePage />} />
           <Route path="backoffice/legal"   element={<LegalPage />} />
           <Route path="backoffice/admin"   element={<AdminPage />} />
+
+          {/* 재무본부 — 서브 대시보드 + 세부 직무 */}
+          <Route path="backoffice/finance"            element={<FinancePage />} />
+          <Route path="backoffice/finance/accounting" element={<AccountantPage />} />
+          <Route path="backoffice/finance/treasury"   element={<TreasuryPage />} />
+          <Route path="backoffice/finance/audit"      element={<AuditPage />} />
 
           {/* Front-Office 부서 */}
           <Route path="frontoffice/strategy"  element={<StrategyPage />} />
