@@ -1,7 +1,7 @@
 // FAQ 자동 생성·관리 페이지
 import { useState, useEffect } from 'react'
 import Breadcrumb from '../../../components/layout/Breadcrumb'
-import { generateFaqs, saveFaqs, getFaqs, updateFaq, exportInquiriesCsv, downloadInquiriesCsv } from '../../../api/cs'
+import { generateFaqs, saveFaqs, getFaqs, updateFaq, exportInquiriesCsv, downloadInquiriesCsv, uploadPolicy } from '../../../api/cs'
 
 const TABS = [
   { id: 'generate', label: 'FAQ 자동 생성' },
@@ -210,27 +210,34 @@ function GenerateTab() {
 // ── 탭 2: FAQ 관리 ───────────────────────────────────────────
 
 function ManageTab() {
-  const [loading,   setLoading]   = useState(false)
-  const [error,     setError]     = useState(null)
-  const [faqs,      setFaqs]      = useState([])
-  const [editingId, setEditingId] = useState(null)
-  const [editForm,  setEditForm]  = useState({})
+  const [loading,        setLoading]        = useState(false)
+  const [error,          setError]          = useState(null)
+  const [faqs,           setFaqs]           = useState([])
+  const [editingId,      setEditingId]      = useState(null)
+  const [editForm,       setEditForm]       = useState({})
+  // 정책 업로드
+  const [policyFile,     setPolicyFile]     = useState(null)
+  const [policyLoading,  setPolicyLoading]  = useState(false)
+  const [policyResult,   setPolicyResult]   = useState(null)  // { updated_count, message? }
+  const [policyError,    setPolicyError]    = useState(null)
+  // 수정 초안 펼침
+  const [expandedDraft,  setExpandedDraft]  = useState(null)
+  const [applyingId,     setApplyingId]     = useState(null)
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true)
-      setError(null)
-      try {
-        const data = await getFaqs()
-        setFaqs(data.items)
-      } catch (e) {
-        setError(e.message)
-      } finally {
-        setLoading(false)
-      }
+  async function loadFaqs() {
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await getFaqs()
+      setFaqs(data.items)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
     }
-    load()
-  }, [])
+  }
+
+  useEffect(() => { loadFaqs() }, [])
 
   function startEdit(faq) {
     setEditingId(faq.id)
@@ -247,8 +254,98 @@ function ManageTab() {
     }
   }
 
+  async function handlePolicyUpload() {
+    if (!policyFile) return
+    setPolicyLoading(true)
+    setPolicyError(null)
+    setPolicyResult(null)
+    try {
+      const data = await uploadPolicy(policyFile)
+      setPolicyResult(data)
+      if (data.updated_count > 0) await loadFaqs()
+    } catch (e) {
+      setPolicyError(e.message)
+    } finally {
+      setPolicyLoading(false)
+    }
+  }
+
+  async function handleApplyDraft(faq) {
+    setApplyingId(faq.id)
+    try {
+      const updated = await updateFaq(faq.id, {
+        answer:           faq.suggested_answer,
+        flagged:          false,
+        suggested_answer: '',
+      })
+      setFaqs(prev => prev.map(f => f.id === faq.id ? { ...f, ...updated } : f))
+      setExpandedDraft(null)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setApplyingId(null)
+    }
+  }
+
+  const flaggedCount = faqs.filter(f => f.flagged).length
+
   return (
-    <div>
+    <div className="flex flex-col gap-5">
+
+      {/* 정책 문서 업로드 */}
+      <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20 p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <svg className="w-4 h-4 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <h3 className="text-sm font-semibold text-gray-800 dark:text-white">정책 변경 감지</h3>
+          <span className="text-xs text-gray-400 dark:text-gray-500">— 정책 문서를 업로드하면 FAQ 자동 검토 후 수정 초안 생성</span>
+        </div>
+
+        <div className="flex flex-wrap gap-2 items-center">
+          <label className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 min-h-[40px] px-3 py-2 rounded-lg border border-dashed border-blue-300 dark:border-blue-700 cursor-pointer hover:border-blue-500 transition-colors">
+              <svg className="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              <span className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                {policyFile ? policyFile.name : 'CS_Standard_Policy.docx'}
+              </span>
+            </div>
+            <input
+              type="file"
+              accept=".docx"
+              className="hidden"
+              onChange={e => { setPolicyFile(e.target.files?.[0] ?? null); setPolicyResult(null) }}
+            />
+          </label>
+          <button
+            onClick={handlePolicyUpload}
+            disabled={!policyFile || policyLoading}
+            className="min-h-[40px] px-4 rounded-lg bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shrink-0"
+          >
+            {policyLoading ? <><Spinner />분석 중...</> : '업데이트 확인'}
+          </button>
+        </div>
+
+        {policyError && (
+          <p className="mt-2 text-xs text-red-600 dark:text-red-400">{policyError}</p>
+        )}
+        {policyResult && (
+          <div className={`mt-2 text-xs font-medium px-3 py-1.5 rounded-lg ${
+            policyResult.updated_count > 0
+              ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+              : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+          }`}>
+            {policyResult.updated_count > 0
+              ? `${policyResult.updated_count}개 FAQ에 수정 초안이 생성되었습니다. 아래에서 확인하고 적용하세요.`
+              : (policyResult.message || '정책과 불일치하는 FAQ가 없습니다.')}
+          </div>
+        )}
+      </div>
+
       <ErrorBanner message={error} />
 
       {/* 빈 상태 */}
@@ -269,8 +366,20 @@ function ManageTab() {
       {/* FAQ 목록 */}
       {!loading && faqs.length > 0 && (
         <div className="flex flex-col gap-3">
+          {flaggedCount > 0 && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+              ⚠ 업데이트 필요 {flaggedCount}건 — 수정 초안을 검토 후 적용하세요.
+            </p>
+          )}
           {faqs.map(faq => (
-            <div key={faq.id} className="rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+            <div
+              key={faq.id}
+              className={`rounded-xl border p-4 ${
+                faq.flagged
+                  ? 'border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/10'
+                  : 'border-gray-200 dark:border-gray-700'
+              }`}
+            >
               {editingId === faq.id ? (
                 <div className="flex flex-col gap-2">
                   <input
@@ -295,27 +404,56 @@ function ManageTab() {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 font-medium">
-                        {faq.category}
-                      </span>
-                      {faq.flagged && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 font-medium">
-                          업데이트 필요
+                <div>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 font-medium">
+                          {faq.category}
                         </span>
+                        {faq.flagged && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-400 text-white dark:bg-amber-600 font-medium">
+                            업데이트 필요
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Q. {faq.question}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{faq.answer}</p>
+                    </div>
+                    <div className="flex flex-col gap-1 shrink-0">
+                      <button
+                        onClick={() => startEdit(faq)}
+                        className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 min-h-[32px] px-2"
+                      >
+                        수정
+                      </button>
+                      {faq.flagged && faq.suggested_answer && (
+                        <button
+                          onClick={() => setExpandedDraft(expandedDraft === faq.id ? null : faq.id)}
+                          className="text-xs text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 min-h-[32px] px-2 whitespace-nowrap"
+                        >
+                          {expandedDraft === faq.id ? '초안 닫기' : '수정 초안'}
+                        </button>
                       )}
                     </div>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Q. {faq.question}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">A. {faq.answer}</p>
                   </div>
-                  <button
-                    onClick={() => startEdit(faq)}
-                    className="shrink-0 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 min-h-[32px] px-2"
-                  >
-                    수정
-                  </button>
+
+                  {/* 수정 초안 패널 */}
+                  {expandedDraft === faq.id && faq.suggested_answer && (
+                    <div className="mt-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20 p-3">
+                      <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1.5">AI 수정 초안</p>
+                      <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
+                        {faq.suggested_answer}
+                      </p>
+                      <button
+                        onClick={() => handleApplyDraft(faq)}
+                        disabled={applyingId === faq.id}
+                        className="min-h-[32px] px-4 text-xs rounded-lg bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white font-medium transition-colors flex items-center gap-1.5"
+                      >
+                        {applyingId === faq.id ? <><Spinner />적용 중...</> : '초안 적용'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

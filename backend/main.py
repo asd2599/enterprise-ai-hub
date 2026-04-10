@@ -12,6 +12,7 @@ from routers.auth import router as auth_router
 from routers.CS.cs_response import router as cs_response_router
 from routers.CS.cs_faq import router as cs_faq_router
 from routers.CS.cs_voc import router as cs_voc_router
+from routers.CS.cs_policy import router as cs_policy_router
 
 # 업로드 폴더 보장
 os.makedirs("uploads", exist_ok=True)
@@ -33,6 +34,7 @@ app.include_router(finance_router,     prefix="/api/finance")
 app.include_router(cs_response_router, prefix="/api/cs/response",  tags=["cs"])
 app.include_router(cs_faq_router,      prefix="/api/cs/faq",       tags=["cs"])
 app.include_router(cs_voc_router,      prefix="/api/cs/voc",       tags=["cs"])
+app.include_router(cs_policy_router,   prefix="/api/cs/policy",    tags=["cs"])
 
 
 # 업로드 이미지 정적 서빙

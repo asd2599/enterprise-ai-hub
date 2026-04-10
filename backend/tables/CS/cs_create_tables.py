@@ -99,6 +99,7 @@ MIGRATIONS: list[tuple[str, str]] = [
     ("cs_inquiries.sentiment",      "ALTER TABLE cs_inquiries ADD COLUMN IF NOT EXISTS sentiment       VARCHAR(10)"),
     ("cs_inquiries.final_response", "ALTER TABLE cs_inquiries ADD COLUMN IF NOT EXISTS final_response  TEXT"),
     ("cs_inquiries.status",         "ALTER TABLE cs_inquiries ADD COLUMN IF NOT EXISTS status          VARCHAR(20) NOT NULL DEFAULT '대기'"),
+    ("cs_faqs.suggested_answer",    "ALTER TABLE cs_faqs ADD COLUMN IF NOT EXISTS suggested_answer     TEXT"),
 ]
 
 TRIGGERS: list[tuple[str, str]] = [
