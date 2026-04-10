@@ -8,6 +8,7 @@ class Settings:
     openai_api_key: str = os.environ["OPENAI_API_KEY"]
     frontend_url: str  = os.environ.get("FRONTEND_URL", "http://localhost:5173")
     port: int          = int(os.environ.get("PORT", 8000))
+    app_timezone: str  = os.environ.get("APP_TIMEZONE", "Asia/Seoul")
 
     db_host:     str = os.environ["DB_HOST"]
     db_port:     int = int(os.environ.get("DB_PORT", 5432))

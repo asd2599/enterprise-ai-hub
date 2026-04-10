@@ -3,6 +3,9 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import AppLayout from './components/layout/AppLayout'
 import DashboardPage from './pages/DashboardPage'
 import CategoryPage from './pages/CategoryPage'
+import Login from './pages/web_login/Login'
+import Register from './pages/web_login/Register'
+import Setting from './pages/setting/Setting'
 
 // Back-Office
 import HRPage       from './pages/backoffice/HRPage'
@@ -15,6 +18,7 @@ import QGenerate    from './pages/backoffice/HR/QGenerate'
 import RegulationChat from './pages/backoffice/HR/RegulationChat'
 import Pay          from './pages/backoffice/HR/Pay'
 import HumanResources from './pages/backoffice/HR/HumanResources'
+import AccountApproval from './pages/backoffice/HR/AccountApproval'
 import Match        from './pages/backoffice/HR/Match'
 import Evaluate     from './pages/backoffice/HR/Evaluate'
 import AutoManual   from './pages/backoffice/HR/AutoManual'
@@ -42,8 +46,11 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
+          <Route path="setting" element={<Setting />} />
 
           {/* 카테고리 페이지 */}
           <Route path=":categoryId" element={<CategoryPage />} />
@@ -56,6 +63,7 @@ function App() {
           <Route path="backoffice/hr/regulation-chat" element={<RegulationChat />} />
           <Route path="backoffice/hr/pay"            element={<Pay />} />
           <Route path="backoffice/hr/humanresources" element={<HumanResources />} />
+          <Route path="backoffice/hr/account-approval" element={<AccountApproval />} />
           <Route path="backoffice/hr/match"          element={<Match />} />
           <Route path="backoffice/hr/evaluate"       element={<Evaluate />} />
           <Route path="backoffice/hr/auto-manual"    element={<AutoManual />} />

@@ -4,6 +4,22 @@ import Breadcrumb from '../../components/layout/Breadcrumb';
 
 const HR_TOOLS = [
   {
+    id: 'account-approval',
+    label: '계정 승인 관리',
+    description:
+      '회원가입한 사원의 승인 대기 계정을 확인하고 부서와 직급을 배정합니다.',
+    path: '/backoffice/hr/account-approval',
+    badge: '계정 승인 · 권한 활성화 · 인사 배정',
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
+    ),
+  },
+  {
     id: 'hire-create',
     label: '채용 공고 생성기',
     description:
@@ -179,7 +195,7 @@ export default function HRPage() {
           있습니다.
         </p>
         <span className="inline-block mt-3 text-xs px-2.5 py-1 rounded-full font-medium bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
-          인사 도구 9개
+          인사 도구 10개
         </span>
       </div>
 
