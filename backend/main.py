@@ -6,6 +6,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from config import settings
 from routers.finance import router as finance_router
+from routers.CS.cs_response import router as cs_response_router
+from routers.CS.cs_faq import router as cs_faq_router
+from routers.CS.cs_voc import router as cs_voc_router
 
 app = FastAPI(title="Enterprise AI Hub API")
 
@@ -19,7 +22,10 @@ app.add_middleware(
 )
 
 # 라우터 등록
-app.include_router(finance_router, prefix="/api/finance")
+app.include_router(finance_router,     prefix="/api/finance")
+app.include_router(cs_response_router, prefix="/api/cs/response",  tags=["cs"])
+app.include_router(cs_faq_router,      prefix="/api/cs/faq",       tags=["cs"])
+app.include_router(cs_voc_router,      prefix="/api/cs/voc",       tags=["cs"])
 
 
 @app.get("/")
