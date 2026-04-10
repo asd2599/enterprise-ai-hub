@@ -92,6 +92,21 @@ export async function exportConfirmedExcel() {
 }
 
 /**
+ * AI 계정과목 추천
+ * @param {string} vendor  가맹점명
+ * @param {string} notes   지출내역/비고
+ * @returns {{ account_code: string }}
+ */
+export async function suggestAccountCode(vendor, notes) {
+  const res = await fetch(`${BASE_URL}/api/finance/suggest-account`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ vendor, notes }),
+  })
+  return handleResponse(res)
+}
+
+/**
  * 업로드 이미지 URL 반환
  * @param {string|null} imagePath  — DB에 저장된 경로 (예: "uploads/2024-01-01_abc12345.jpg")
  */
