@@ -1,6 +1,6 @@
 """
-테이블 생성 스크립트 — .env의 DB 정보로 PostgreSQL에 테이블을 생성합니다.
-실행: python -m tables.create_tables  (backend/ 디렉토리에서 실행)
+재무팀 테이블 생성 스크립트 — .env의 DB 정보로 PostgreSQL에 테이블을 생성합니다.
+실행: python -m tables.finance.finance_create_tables  (backend/ 디렉토리에서 실행)
 """
 import sys
 import os
@@ -8,7 +8,7 @@ import pg8000.dbapi as pg8000
 from dotenv import load_dotenv
 
 # backend/.env 로드 (backend/ 또는 그 하위에서 실행 시 모두 탐색)
-_env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
+_env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env")
 load_dotenv(_env_path)
 
 DB_HOST     = os.environ["DB_HOST"]
@@ -129,7 +129,7 @@ TRIGGERS: list[tuple[str, str]] = [
 # 실행
 # ────────────────────────────────────────────────────────────
 def create_tables() -> None:
-    print(f"[DB] 접속 중: {DB_HOST}:{DB_PORT}/{DB_DATABASE}")
+    print(f"[재무팀 DB] 접속 중: {DB_HOST}:{DB_PORT}/{DB_DATABASE}")
 
     conn = pg8000.connect(
         host=DB_HOST,
@@ -161,7 +161,7 @@ def create_tables() -> None:
             cur.execute(ddl)
             print(f"  [OK] 트리거: {trig_name}")
 
-        print("\n[완료] 모든 테이블이 정상적으로 생성되었습니다.")
+        print("\n[완료] 재무팀 테이블이 정상적으로 생성되었습니다.")
 
     except Exception as e:
         print(f"\n[오류] 테이블 생성 실패: {e}", file=sys.stderr)
