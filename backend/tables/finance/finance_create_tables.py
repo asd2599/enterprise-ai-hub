@@ -22,9 +22,9 @@ DB_DATABASE = os.environ["DB_DATABASE"]
 # ────────────────────────────────────────────────────────────
 TABLES: list[tuple[str, str]] = [
     (
-        "transactions",
+        "finance_transactions",
         """
-        CREATE TABLE IF NOT EXISTS transactions (
+        CREATE TABLE IF NOT EXISTS finance_transactions (
             id              SERIAL          PRIMARY KEY,
             receipt_date    DATE            NOT NULL,
             item            VARCHAR(255)    NOT NULL,
@@ -43,9 +43,9 @@ TABLES: list[tuple[str, str]] = [
         """,
     ),
     (
-        "budgets",
+        "finance_budgets",
         """
-        CREATE TABLE IF NOT EXISTS budgets (
+        CREATE TABLE IF NOT EXISTS finance_budgets (
             id              SERIAL          PRIMARY KEY,
             fiscal_year     SMALLINT        NOT NULL,
             department      VARCHAR(100)    NOT NULL,
@@ -58,11 +58,11 @@ TABLES: list[tuple[str, str]] = [
         """,
     ),
     (
-        "audit_logs",
+        "finance_audit_logs",
         """
-        CREATE TABLE IF NOT EXISTS audit_logs (
+        CREATE TABLE IF NOT EXISTS finance_audit_logs (
             id              SERIAL          PRIMARY KEY,
-            transaction_id  INTEGER         REFERENCES transactions (id) ON DELETE SET NULL,
+            transaction_id  INTEGER         REFERENCES finance_transactions (id) ON DELETE SET NULL,
             risk_level      VARCHAR(10)     NOT NULL CHECK (risk_level IN ('safe', 'warning', 'danger')),
             violated_rule   VARCHAR(255),
             ai_reason       TEXT            NOT NULL,
@@ -77,14 +77,14 @@ TABLES: list[tuple[str, str]] = [
 ]
 
 INDEXES: list[tuple[str, str]] = [
-    ("idx_transactions_receipt_date", "CREATE INDEX IF NOT EXISTS idx_transactions_receipt_date ON transactions (receipt_date)"),
-    ("idx_transactions_account_code", "CREATE INDEX IF NOT EXISTS idx_transactions_account_code ON transactions (account_code)"),
-    ("idx_transactions_department",   "CREATE INDEX IF NOT EXISTS idx_transactions_department   ON transactions (department)"),
-    ("idx_budgets_fiscal_year",       "CREATE INDEX IF NOT EXISTS idx_budgets_fiscal_year       ON budgets (fiscal_year)"),
-    ("idx_budgets_department",        "CREATE INDEX IF NOT EXISTS idx_budgets_department        ON budgets (department)"),
-    ("idx_audit_logs_risk_level",     "CREATE INDEX IF NOT EXISTS idx_audit_logs_risk_level     ON audit_logs (risk_level)"),
-    ("idx_audit_logs_transaction_id", "CREATE INDEX IF NOT EXISTS idx_audit_logs_transaction_id ON audit_logs (transaction_id)"),
-    ("idx_audit_logs_is_confirmed",   "CREATE INDEX IF NOT EXISTS idx_audit_logs_is_confirmed   ON audit_logs (is_confirmed)"),
+    ("idx_finance_transactions_receipt_date", "CREATE INDEX IF NOT EXISTS idx_finance_transactions_receipt_date ON finance_transactions (receipt_date)"),
+    ("idx_finance_transactions_account_code", "CREATE INDEX IF NOT EXISTS idx_finance_transactions_account_code ON finance_transactions (account_code)"),
+    ("idx_finance_transactions_department",   "CREATE INDEX IF NOT EXISTS idx_finance_transactions_department   ON finance_transactions (department)"),
+    ("idx_finance_budgets_fiscal_year",       "CREATE INDEX IF NOT EXISTS idx_finance_budgets_fiscal_year       ON finance_budgets (fiscal_year)"),
+    ("idx_finance_budgets_department",        "CREATE INDEX IF NOT EXISTS idx_finance_budgets_department        ON finance_budgets (department)"),
+    ("idx_finance_audit_logs_risk_level",     "CREATE INDEX IF NOT EXISTS idx_finance_audit_logs_risk_level     ON finance_audit_logs (risk_level)"),
+    ("idx_finance_audit_logs_transaction_id", "CREATE INDEX IF NOT EXISTS idx_finance_audit_logs_transaction_id ON finance_audit_logs (transaction_id)"),
+    ("idx_finance_audit_logs_is_confirmed",   "CREATE INDEX IF NOT EXISTS idx_finance_audit_logs_is_confirmed   ON finance_audit_logs (is_confirmed)"),
 ]
 
 TRIGGER_FUNCTION = """
@@ -99,24 +99,24 @@ $$
 
 TRIGGERS: list[tuple[str, str]] = [
     (
-        "trg_transactions_updated_at",
+        "trg_finance_transactions_updated_at",
         """
         DO $$ BEGIN
-            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_transactions_updated_at') THEN
-                CREATE TRIGGER trg_transactions_updated_at
-                    BEFORE UPDATE ON transactions
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_finance_transactions_updated_at') THEN
+                CREATE TRIGGER trg_finance_transactions_updated_at
+                    BEFORE UPDATE ON finance_transactions
                     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
             END IF;
         END $$
         """,
     ),
     (
-        "trg_budgets_updated_at",
+        "trg_finance_budgets_updated_at",
         """
         DO $$ BEGIN
-            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_budgets_updated_at') THEN
-                CREATE TRIGGER trg_budgets_updated_at
-                    BEFORE UPDATE ON budgets
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_finance_budgets_updated_at') THEN
+                CREATE TRIGGER trg_finance_budgets_updated_at
+                    BEFORE UPDATE ON finance_budgets
                     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
             END IF;
         END $$
@@ -142,21 +142,17 @@ def create_tables() -> None:
 
     cur = conn.cursor()
     try:
-        # 1. 테이블 생성
         for table_name, ddl in TABLES:
             cur.execute(ddl)
             print(f"  [OK] 테이블: {table_name}")
 
-        # 2. 인덱스 생성
         for idx_name, ddl in INDEXES:
             cur.execute(ddl)
             print(f"  [OK] 인덱스: {idx_name}")
 
-        # 3. 트리거 함수
         cur.execute(TRIGGER_FUNCTION)
         print("  [OK] 함수: set_updated_at()")
 
-        # 4. 트리거
         for trig_name, ddl in TRIGGERS:
             cur.execute(ddl)
             print(f"  [OK] 트리거: {trig_name}")
