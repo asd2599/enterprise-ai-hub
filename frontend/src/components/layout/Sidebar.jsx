@@ -77,7 +77,7 @@ function Sidebar({ isOpen, onClose }) {
                         onClick={onClose}
                         className={({ isActive }) =>
                           [
-                            'block px-3 py-2 rounded-r-lg text-sm transition-colors truncate min-h-[44px] flex items-center',
+                            'px-3 py-2 rounded-r-lg text-sm transition-colors truncate min-h-[44px] flex items-center',
                             isActive
                               ? theme.sidebarActive
                               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/60 hover:text-gray-900 dark:hover:text-white',
@@ -91,6 +91,32 @@ function Sidebar({ isOpen, onClose }) {
                 </div>
               )
             })}
+          </div>
+
+          <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-800">
+            <NavLink
+              to="/setting"
+              onClick={onClose}
+              className={({ isActive }) =>
+                [
+                  'flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                  isActive
+                    ? 'bg-fuchsia-50 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-300'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/60 hover:text-gray-900 dark:hover:text-white',
+                ].join(' ')
+              }
+            >
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10.325 4.317a1 1 0 011.35-.936l.9.36a1 1 0 00.916-.064l.84-.525a1 1 0 011.33.21l.626.718a1 1 0 00.86.34l.95-.09a1 1 0 011.09.886l.092.95a1 1 0 00.34.86l.717.626a1 1 0 01.21 1.33l-.524.84a1 1 0 00-.064.916l.36.9a1 1 0 01-.936 1.35l-.95.092a1 1 0 00-.86.34l-.626.717a1 1 0 01-1.33.21l-.84-.524a1 1 0 00-.916-.064l-.9.36a1 1 0 01-1.35-.936l-.092-.95a1 1 0 00-.34-.86l-.718-.626a1 1 0 01-.21-1.33l.525-.84a1 1 0 00.064-.916l-.36-.9a1 1 0 01.936-1.35l.95-.092a1 1 0 00.86-.34l.626-.718z"
+                />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              설정
+            </NavLink>
           </div>
         </nav>
       </aside>

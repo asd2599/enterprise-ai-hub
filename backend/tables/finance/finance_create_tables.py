@@ -16,6 +16,7 @@ DB_PORT     = int(os.environ.get("DB_PORT", 5432))
 DB_USER     = os.environ["DB_USER"]
 DB_PASSWORD = os.environ["DB_PASSWORD"]
 DB_DATABASE = os.environ["DB_DATABASE"]
+APP_TIMEZONE = os.environ.get("APP_TIMEZONE", "Asia/Seoul")
 
 # ────────────────────────────────────────────────────────────
 # DDL 정의 — (테이블명, CREATE 구문) 순서대로 실행
@@ -141,6 +142,8 @@ def create_tables() -> None:
     conn.autocommit = True
 
     cur = conn.cursor()
+    cur.execute("SELECT set_config('TimeZone', %s, false)", (APP_TIMEZONE,))
+    cur.fetchone()
     try:
         for table_name, ddl in TABLES:
             cur.execute(ddl)

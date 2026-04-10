@@ -12,4 +12,8 @@ def get_connection():
         database=settings.db_database,
     )
     conn.autocommit = True
+    cur = conn.cursor()
+    cur.execute("SELECT set_config('TimeZone', %s, false)", (settings.app_timezone,))
+    cur.fetchone()
+    cur.close()
     return conn

@@ -1,6 +1,252 @@
-// 인사(HR)팀 페이지
-import DeptPageLayout from '../../components/layout/DeptPageLayout'
+// 인사(HR)팀 서브 대시보드 — 인사 업무 도구 선택 허브
+import { useNavigate } from 'react-router-dom';
+import Breadcrumb from '../../components/layout/Breadcrumb';
+
+const HR_TOOLS = [
+  {
+    id: 'account-approval',
+    label: '계정 승인 관리',
+    description:
+      '회원가입한 사원의 승인 대기 계정을 확인하고 부서와 직급을 배정합니다.',
+    path: '/backoffice/hr/account-approval',
+    badge: '계정 승인 · 권한 활성화 · 인사 배정',
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
+    ),
+  },
+  {
+    id: 'hire-create',
+    label: '채용 공고 생성기',
+    description:
+      '직무 요건과 채용 목적을 기반으로 공고 초안을 빠르게 작성합니다.',
+    path: '/backoffice/hr/hire-create',
+    badge: '채용 · 공고 · JD',
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+      />
+    ),
+  },
+  {
+    id: 'hire-request',
+    label: '채용 요청서 작성',
+    description: '채용 필요 인원과 요청 사유를 표준 양식에 맞춰 정리합니다.',
+    path: '/backoffice/hr/hire-request',
+    badge: '요청서 · 승인 · 채용 계획',
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+      />
+    ),
+  },
+  {
+    id: 'q-generate',
+    label: '면접 질문 자동 생성',
+    description:
+      '직무별 핵심 역량을 반영한 구조화된 면접 질문 세트를 생성합니다.',
+    path: '/backoffice/hr/q-generate',
+    badge: '면접 · 질문 · 역량',
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+      />
+    ),
+  },
+  {
+    id: 'regulation-chat',
+    label: '인사 규정 챗봇',
+    description:
+      '사내 규정과 제도 관련 질문에 빠르게 답변하고 참고 규정을 안내합니다.',
+    path: '/backoffice/hr/regulation-chat',
+    badge: '규정 · 제도 · Q&A',
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+      />
+    ),
+  },
+  {
+    id: 'pay',
+    label: '급여 관리',
+    description:
+      '급여 정산과 지급 관련 실무를 정리하고 필요한 작업 흐름을 지원합니다.',
+    path: '/backoffice/hr/pay',
+    badge: '급여 · 정산 · 지급',
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+      />
+    ),
+  },
+  {
+    id: 'humanresources',
+    label: '전체 인원 부서 변경',
+    description:
+      '조직 개편이나 인력 재배치에 맞춰 전체 인원의 부서를 일괄 변경합니다.',
+    path: '/backoffice/hr/humanresources',
+    badge: '조직 변경 · 부서 이동 · 인원 관리',
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+      />
+    ),
+  },
+  {
+    id: 'match',
+    label: '인재 매칭',
+    description:
+      '후보자 역량과 직무 요구사항을 비교해 적합한 인재를 추천합니다.',
+    path: '/backoffice/hr/match',
+    badge: '후보자 · 적합도 · 추천',
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+      />
+    ),
+  },
+  {
+    id: 'evaluate',
+    label: '인사 평가 보고서 작성',
+    description:
+      '평가 결과와 근거를 바탕으로 객관적인 인사 평가 보고서를 작성합니다.',
+    path: '/backoffice/hr/evaluate',
+    badge: '평가 · 리포트 · 성과',
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+      />
+    ),
+  },
+  {
+    id: 'auto-manual',
+    label: '온보딩 자료 자동화',
+    description:
+      '신입사원 안내문과 교육 자료를 표준화된 형태로 빠르게 생성합니다.',
+    path: '/backoffice/hr/auto-manual',
+    badge: '온보딩 · 교육 · 매뉴얼',
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+      />
+    ),
+  },
+];
 
 export default function HRPage() {
-  return <DeptPageLayout categoryId="backoffice" deptId="hr" />
+  const navigate = useNavigate();
+
+  return (
+    <div>
+      <Breadcrumb
+        crumbs={[
+          { label: '경영지원 및 관리', to: '/backoffice' },
+          { label: '인사(HR)팀' },
+        ]}
+      />
+
+      <div className="mt-4 mb-7 rounded-xl border p-5 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0 bg-blue-600">
+            인사
+          </div>
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+              Back-Office
+            </span>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">
+              인사(HR)팀
+            </h1>
+          </div>
+        </div>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          인사 운영, 채용, 평가, 조직 관리에 필요한 AI 도구를 빠르게 선택할 수
+          있습니다.
+        </p>
+        <span className="inline-block mt-3 text-xs px-2.5 py-1 rounded-full font-medium bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
+          인사 도구 10개
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {HR_TOOLS.map((tool) => (
+          <button
+            key={tool.id}
+            onClick={() => navigate(tool.path)}
+            className="group text-left w-full rounded-xl border bg-white dark:bg-gray-900 p-5
+              transition-all duration-150 hover:shadow-md active:scale-[0.98] cursor-pointer
+              border-blue-200 dark:border-blue-800
+              hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-blue-100 dark:hover:shadow-blue-900/20"
+          >
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 bg-blue-100 dark:bg-blue-900/60">
+              <svg
+                className="w-5 h-5 text-blue-600 dark:text-blue-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                {tool.icon}
+              </svg>
+            </div>
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-1.5">
+              {tool.label}
+            </h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-3">
+              {tool.description}
+            </p>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-medium">
+              {tool.badge}
+            </span>
+            <div className="flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400 mt-3">
+              바로가기
+              <svg
+                className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }

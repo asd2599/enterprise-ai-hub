@@ -47,12 +47,17 @@ export const CATEGORIES = [
       {
         id: 'hr',
         label: '인사(HR)팀',
-        description: '채용 공고 생성 · 면접 질문 자동화 · 인사 문서 작성',
+        description: '채용 · 평가 · 규정 · 급여 등 인사 실무를 위한 AI 도구',
         tools: [
-          { id: 'hr-job-posting',   label: '채용 공고 생성기',     description: '직무 요건을 입력하면 최적화된 채용 공고를 자동 생성합니다.',      icon: 'document' },
-          { id: 'hr-interview',     label: '면접 질문 자동 생성',  description: '직무 유형에 맞는 역량 기반 면접 질문 세트를 만들어 드립니다.',   icon: 'chat' },
-          { id: 'hr-eval-report',   label: '인사 평가 보고서 작성', description: '평가 항목과 점수를 바탕으로 객관적인 평가 보고서를 작성합니다.',  icon: 'chart' },
-          { id: 'hr-onboarding',    label: '온보딩 자료 자동화',   description: '신입사원 온보딩 가이드와 교육 자료를 빠르게 생성합니다.',          icon: 'users' },
+          { id: 'hr-hire-create',   label: '채용 공고 생성기',       description: '직무 요건을 입력하면 최적화된 채용 공고를 자동 생성합니다.',            icon: 'document', path: '/backoffice/hr/hire-create' },
+          { id: 'hr-hire-request',  label: '채용 요청서 작성',       description: '채용 필요 인원과 요청 사유를 정리해 채용 요청서를 작성합니다.',          icon: 'edit',     path: '/backoffice/hr/hire-request' },
+          { id: 'hr-interview',     label: '면접 질문 자동 생성',    description: '직무 유형에 맞는 역량 기반 면접 질문 세트를 만들어 드립니다.',         icon: 'chat',     path: '/backoffice/hr/q-generate' },
+          { id: 'hr-regulation',    label: '인사 규정 챗봇',         description: '사내 인사 규정과 제도를 빠르게 조회하고 질의응답할 수 있습니다.',       icon: 'chat',     path: '/backoffice/hr/regulation-chat' },
+          { id: 'hr-pay',           label: '급여 관리',             description: '급여 정산과 지급 관련 업무를 정리하고 필요한 문서를 준비합니다.',          icon: 'chart',    path: '/backoffice/hr/pay' },
+          { id: 'hr-humanresources', label: '전체 인원 부서 변경',   description: '전체 임직원의 소속 부서를 선택한 조직으로 일괄 변경할 수 있습니다.',      icon: 'users',    path: '/backoffice/hr/humanresources' },
+          { id: 'hr-match',         label: '인재 매칭',             description: '후보자 정보와 직무 요건을 비교해 적합한 인재를 빠르게 매칭합니다.',       icon: 'compare',  path: '/backoffice/hr/match' },
+          { id: 'hr-eval-report',   label: '인사 평가 보고서 작성',   description: '평가 항목과 점수를 바탕으로 객관적인 평가 보고서를 작성합니다.',        icon: 'check',    path: '/backoffice/hr/evaluate' },
+          { id: 'hr-onboarding',    label: '온보딩 자료 자동화',     description: '신입사원 온보딩 가이드와 교육 자료를 빠르게 생성합니다.',                icon: 'users',    path: '/backoffice/hr/auto-manual' },
         ],
       },
       {
