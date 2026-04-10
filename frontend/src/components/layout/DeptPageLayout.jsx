@@ -1,5 +1,5 @@
 // 부서 페이지 공통 레이아웃 — 각 부서 페이지에서 import하여 사용
-import { Navigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { CATEGORY_MAP, DEPT_MAP, COLOR_THEMES } from '../../data/departments'
 import Breadcrumb from './Breadcrumb'
 
@@ -38,9 +38,10 @@ const TOOL_ICONS = {
   ),
 }
 
-function ToolCard({ tool, theme }) {
+function ToolCard({ tool, theme, onClick }) {
   return (
     <button
+      onClick={onClick}
       className={[
         'group text-left w-full rounded-xl border bg-white dark:bg-gray-900 p-5',
         'transition-all duration-150 hover:shadow-md active:scale-[0.98] cursor-pointer',
@@ -71,6 +72,7 @@ function ToolCard({ tool, theme }) {
 
 // categoryId, deptId를 props로 받아 렌더링
 function DeptPageLayout({ categoryId, deptId }) {
+  const navigate = useNavigate()
   const cat = CATEGORY_MAP[categoryId]
   const dept = DEPT_MAP[deptId]
 
@@ -119,7 +121,12 @@ function DeptPageLayout({ categoryId, deptId }) {
       {tools.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {tools.map(tool => (
-            <ToolCard key={tool.id} tool={tool} theme={theme} />
+            <ToolCard
+              key={tool.id}
+              tool={tool}
+              theme={theme}
+              onClick={tool.path ? () => navigate(tool.path) : undefined}
+            />
           ))}
         </div>
       ) : (
