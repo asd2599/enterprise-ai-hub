@@ -28,10 +28,14 @@ TABLES: list[tuple[str, str]] = [
             inquiry_text        TEXT            NOT NULL,
             order_no            VARCHAR(100),
             tone                VARCHAR(20)     NOT NULL DEFAULT 'formal',
-            inquiry_type        VARCHAR(50),
+            main_type           VARCHAR(50),
+            sub_type            VARCHAR(50),
+            sentiment           VARCHAR(10),
             draft               TEXT,
+            final_response      TEXT,
             escalation_needed   BOOLEAN         NOT NULL DEFAULT FALSE,
             escalation_reason   TEXT,
+            status              VARCHAR(20)     NOT NULL DEFAULT '대기',
             created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW()
         )
         """,
@@ -68,8 +72,11 @@ TABLES: list[tuple[str, str]] = [
 ]
 
 INDEXES: list[tuple[str, str]] = [
-    ("idx_cs_inquiries_type",       "CREATE INDEX IF NOT EXISTS idx_cs_inquiries_type       ON cs_inquiries (inquiry_type)"),
-    ("idx_cs_inquiries_escalation", "CREATE INDEX IF NOT EXISTS idx_cs_inquiries_escalation ON cs_inquiries (escalation_needed)"),
+    ("idx_cs_inquiries_main_type",   "CREATE INDEX IF NOT EXISTS idx_cs_inquiries_main_type   ON cs_inquiries (main_type)"),
+    ("idx_cs_inquiries_sub_type",    "CREATE INDEX IF NOT EXISTS idx_cs_inquiries_sub_type    ON cs_inquiries (sub_type)"),
+    ("idx_cs_inquiries_status",      "CREATE INDEX IF NOT EXISTS idx_cs_inquiries_status      ON cs_inquiries (status)"),
+    ("idx_cs_inquiries_escalation",  "CREATE INDEX IF NOT EXISTS idx_cs_inquiries_escalation  ON cs_inquiries (escalation_needed)"),
+    ("idx_cs_inquiries_created_at",  "CREATE INDEX IF NOT EXISTS idx_cs_inquiries_created_at  ON cs_inquiries (created_at)"),
     ("idx_cs_faqs_category",        "CREATE INDEX IF NOT EXISTS idx_cs_faqs_category        ON cs_faqs (category)"),
     ("idx_cs_faqs_flagged",         "CREATE INDEX IF NOT EXISTS idx_cs_faqs_flagged         ON cs_faqs (flagged)"),
 ]
@@ -83,6 +90,15 @@ BEGIN
 END;
 $$
 """
+
+# 기존 테이블에 컬럼이 없을 경우 추가 (멱등 마이그레이션)
+MIGRATIONS: list[tuple[str, str]] = [
+    ("cs_inquiries.main_type",      "ALTER TABLE cs_inquiries ADD COLUMN IF NOT EXISTS main_type       VARCHAR(50)"),
+    ("cs_inquiries.sub_type",       "ALTER TABLE cs_inquiries ADD COLUMN IF NOT EXISTS sub_type        VARCHAR(50)"),
+    ("cs_inquiries.sentiment",      "ALTER TABLE cs_inquiries ADD COLUMN IF NOT EXISTS sentiment       VARCHAR(10)"),
+    ("cs_inquiries.final_response", "ALTER TABLE cs_inquiries ADD COLUMN IF NOT EXISTS final_response  TEXT"),
+    ("cs_inquiries.status",         "ALTER TABLE cs_inquiries ADD COLUMN IF NOT EXISTS status          VARCHAR(20) NOT NULL DEFAULT '대기'"),
+]
 
 TRIGGERS: list[tuple[str, str]] = [
     (
@@ -114,9 +130,15 @@ def create_tables() -> None:
     cur = conn.cursor()
 
     try:
+        # 1. 테이블 생성
         for table_name, ddl in TABLES:
             cur.execute(ddl)
             print(f"  [OK] 테이블: {table_name}")
+
+        # 2. 마이그레이션 (컬럼 추가)
+        for col_name, ddl in MIGRATIONS:
+            cur.execute(ddl)
+            print(f"  [OK] 마이그레이션: {col_name}")
 
         for idx_name, ddl in INDEXES:
             cur.execute(ddl)
