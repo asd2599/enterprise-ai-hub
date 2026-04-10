@@ -1,8 +1,20 @@
 // 응답 초안 자동 생성 페이지
 import { useState } from 'react'
 import Breadcrumb from '../../../components/layout/Breadcrumb'
+import { generateResponseDraft, saveInquiry } from '../../../api/cs'
 
-const INQUIRY_TYPES = ['배송', '환불', '기술', '기타']
+const MAIN_TYPE_COLOR = {
+  '배송':    'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',
+  '반품/교환': 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300',
+  '환불':    'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300',
+  '결제':    'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300',
+  '상품':    'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300',
+  '주문':    'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-300',
+  '회원/계정': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300',
+  '혜택':    'bg-pink-100 text-pink-700 dark:bg-pink-900/50 dark:text-pink-300',
+  '기타':    'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+}
+
 const TONE_OPTIONS  = [
   { value: 'formal',   label: '공식체' },
   { value: 'friendly', label: '친근체' },
@@ -28,17 +40,19 @@ function ErrorBanner({ message }) {
   )
 }
 
-function TypeBadge({ type }) {
-  const colorMap = {
-    배송: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',
-    환불: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300',
-    기술: 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300',
-    기타: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
-  }
+function TypeBadge({ mainType, subType }) {
+  const color = MAIN_TYPE_COLOR[mainType] ?? MAIN_TYPE_COLOR['기타']
   return (
-    <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${colorMap[type] ?? colorMap['기타']}`}>
-      {type}
-    </span>
+    <div className="flex items-center gap-1.5">
+      <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${color}`}>
+        {mainType}
+      </span>
+      {subType && (
+        <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+          {subType}
+        </span>
+      )}
+    </div>
   )
 }
 
@@ -49,9 +63,11 @@ export default function ResponseDraftPage() {
   const [orderNo,    setOrderNo]    = useState('')
   const [tone,       setTone]       = useState('formal')
   const [loading,    setLoading]    = useState(false)
+  const [saving,     setSaving]     = useState(false)
+  const [saved,      setSaved]      = useState(false)
   const [error,      setError]      = useState(null)
   const [result,     setResult]     = useState(null)
-  // result = { type, draft, escalation: { needed, reason } }
+  // result = { main_type, sub_type, draft, escalation: { needed, reason } }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -60,14 +76,38 @@ export default function ResponseDraftPage() {
     setError(null)
     setResult(null)
     try {
-      // TODO: API 연동 — POST /api/cs/response/draft
-      // const data = await generateResponseDraft({ inquiry, order_no: orderNo, tone })
-      // setResult(data)
-      throw new Error('백엔드 API가 아직 연결되지 않았습니다.')
+      const data = await generateResponseDraft({ inquiry, order_no: orderNo, tone })
+      setResult(data)
+      setSaved(false)
     } catch (e) {
       setError(e.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleSave(status) {
+    if (!result) return
+    setSaving(true)
+    setError(null)
+    try {
+      await saveInquiry({
+        inquiry_text:      inquiry,
+        order_no:          orderNo,
+        tone,
+        main_type:         result.main_type,
+        sub_type:          result.sub_type,
+        draft:             result.draft,
+        final_response:    result.draft,
+        escalation_needed: result.escalation?.needed ?? false,
+        escalation_reason: result.escalation?.reason ?? '',
+        status,
+      })
+      setSaved(true)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -207,7 +247,7 @@ export default function ResponseDraftPage() {
             <div className="flex flex-col gap-3">
               {/* 유형 태그 + 에스컬레이션 */}
               <div className="flex items-center gap-2 flex-wrap">
-                <TypeBadge type={result.type} />
+                <TypeBadge mainType={result.main_type} subType={result.sub_type} />
                 {result.escalation?.needed && (
                   <span className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-semibold bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300">
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -252,6 +292,41 @@ export default function ResponseDraftPage() {
                     bg-white dark:bg-gray-900 resize-none focus:outline-none"
                 />
               </div>
+
+              {/* 발송 완료 버튼 */}
+              {saved ? (
+                <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
+                  <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">문의 로그가 저장되었습니다.</span>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleSave('완료')}
+                    disabled={saving}
+                    className="flex-1 min-h-[44px] rounded-xl bg-amber-500 hover:bg-amber-600
+                      disabled:bg-gray-300 dark:disabled:bg-gray-700
+                      text-white text-sm font-semibold transition-colors
+                      flex items-center justify-center gap-2"
+                  >
+                    {saving ? <><Spinner />저장 중...</> : '발송 완료 · 로그 저장'}
+                  </button>
+                  {result.escalation?.needed && (
+                    <button
+                      onClick={() => handleSave('에스컬레이션')}
+                      disabled={saving}
+                      className="min-h-[44px] px-4 rounded-xl bg-red-500 hover:bg-red-600
+                        disabled:bg-gray-300 dark:disabled:bg-gray-700
+                        text-white text-sm font-semibold transition-colors
+                        flex items-center justify-center gap-2"
+                    >
+                      에스컬레이션
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -1,6 +1,7 @@
 // VOC 자동 분석 리포트 페이지
 import { useState } from 'react'
 import Breadcrumb from '../../../components/layout/Breadcrumb'
+import { analyzeVoc, exportInquiriesCsv, downloadInquiriesCsv } from '../../../api/cs'
 
 // ── 공통 컴포넌트 ────────────────────────────────────────────
 
@@ -45,6 +46,9 @@ export default function VocReportPage() {
   const [file,        setFile]        = useState(null)
   const [prevFile,    setPrevFile]    = useState(null)
   const [threshold,   setThreshold]   = useState(30)
+  const [importing,   setImporting]   = useState(false)
+  const [dateFrom,    setDateFrom]    = useState('')
+  const [dateTo,      setDateTo]      = useState('')
   const [loading,     setLoading]     = useState(false)
   const [error,       setError]       = useState(null)
   const [report,      setReport]      = useState(null)
@@ -61,12 +65,25 @@ export default function VocReportPage() {
     setError(null)
     setReport(null)
     try {
-      // TODO: API 연동 — POST /api/cs/voc/analyze (FormData: file, prev_file, threshold)
-      throw new Error('백엔드 API가 아직 연결되지 않았습니다.')
+      const data = await analyzeVoc(file, prevFile, threshold)
+      setReport(data)
     } catch (e) {
       setError(e.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleImportFromDb() {
+    setImporting(true)
+    setError(null)
+    try {
+      const csvFile = await exportInquiriesCsv({ dateFrom, dateTo })
+      setFile(csvFile)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setImporting(false)
     }
   }
 
@@ -113,6 +130,38 @@ export default function VocReportPage() {
       {/* 입력 설정 */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-5 mb-5">
         <h3 className="text-sm font-semibold text-gray-800 dark:text-white mb-4">분석 설정</h3>
+
+        {/* DB에서 가져오기 */}
+        <div className="flex flex-wrap gap-2 items-end mb-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-500 dark:text-gray-400">시작일</label>
+            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+              className="text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-1.5 min-h-[36px] focus:outline-none focus:ring-1 focus:ring-amber-400" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-500 dark:text-gray-400">종료일</label>
+            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+              className="text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-1.5 min-h-[36px] focus:outline-none focus:ring-1 focus:ring-amber-400" />
+          </div>
+          <button
+            onClick={handleImportFromDb}
+            disabled={importing}
+            className="min-h-[36px] px-4 rounded-lg bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white text-xs font-semibold transition-colors flex items-center gap-1.5"
+          >
+            {importing ? <><Spinner />가져오는 중...</> : 'DB에서 로그 가져오기'}
+          </button>
+          <button
+            onClick={() => downloadInquiriesCsv({ dateFrom, dateTo })}
+            className="min-h-[36px] px-3 rounded-lg border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-xs font-medium hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors flex items-center gap-1.5"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            CSV 저장
+          </button>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {/* 이번 주 로그 */}
           <div>

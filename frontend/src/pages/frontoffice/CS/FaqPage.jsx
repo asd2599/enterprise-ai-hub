@@ -1,6 +1,7 @@
 // FAQ 자동 생성·관리 페이지
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Breadcrumb from '../../../components/layout/Breadcrumb'
+import { generateFaqs, saveFaqs, getFaqs, updateFaq, exportInquiriesCsv, downloadInquiriesCsv } from '../../../api/cs'
 
 const TABS = [
   { id: 'generate', label: 'FAQ 자동 생성' },
@@ -31,10 +32,14 @@ function ErrorBanner({ message }) {
 
 function GenerateTab() {
   const [file,      setFile]      = useState(null)
+  const [dateFrom,  setDateFrom]  = useState('')
+  const [dateTo,    setDateTo]    = useState('')
+  const [importing, setImporting] = useState(false)
   const [topN,      setTopN]      = useState(10)
-  const [loading,   setLoading]   = useState(false)
-  const [error,     setError]     = useState(null)
-  const [faqs,      setFaqs]      = useState([])
+  const [loading, setLoading] = useState(false)
+  const [saving,  setSaving]  = useState(false)
+  const [error,   setError]   = useState(null)
+  const [faqs,    setFaqs]    = useState([])
   // faqs = [{ category, question, answer }]
 
   async function handleGenerate() {
@@ -43,8 +48,8 @@ function GenerateTab() {
     setError(null)
     setFaqs([])
     try {
-      // TODO: API 연동 — POST /api/cs/faq/generate (FormData: file, top_n)
-      throw new Error('백엔드 API가 아직 연결되지 않았습니다.')
+      const data = await generateFaqs(file, topN)
+      setFaqs(data.faqs)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -52,11 +57,70 @@ function GenerateTab() {
     }
   }
 
+  async function handleImportFromDb() {
+    setImporting(true)
+    setError(null)
+    try {
+      const csvFile = await exportInquiriesCsv({ dateFrom, dateTo })
+      setFile(csvFile)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  async function handleSaveAll() {
+    if (!faqs.length) return
+    setSaving(true)
+    setError(null)
+    try {
+      await saveFaqs(faqs)
+      setFaqs([])
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-5">
       {/* 파일 업로드 */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-        <h3 className="text-sm font-semibold text-gray-800 dark:text-white mb-3">문의 로그 업로드</h3>
+        <h3 className="text-sm font-semibold text-gray-800 dark:text-white mb-3">문의 로그 불러오기</h3>
+
+        {/* DB에서 가져오기 */}
+        <div className="flex flex-wrap gap-2 items-end mb-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-500 dark:text-gray-400">시작일</label>
+            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+              className="text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-1.5 min-h-[36px] focus:outline-none focus:ring-1 focus:ring-amber-400" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-500 dark:text-gray-400">종료일</label>
+            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+              className="text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-1.5 min-h-[36px] focus:outline-none focus:ring-1 focus:ring-amber-400" />
+          </div>
+          <button
+            onClick={handleImportFromDb}
+            disabled={importing}
+            className="min-h-[36px] px-4 rounded-lg bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white text-xs font-semibold transition-colors flex items-center gap-1.5"
+          >
+            {importing ? <><Spinner />가져오는 중...</> : 'DB에서 가져오기'}
+          </button>
+          <button
+            onClick={() => downloadInquiriesCsv({ dateFrom, dateTo })}
+            className="min-h-[36px] px-3 rounded-lg border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-xs font-medium hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors flex items-center gap-1.5"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            CSV 저장
+          </button>
+        </div>
+
         <div className="flex flex-col sm:flex-row gap-3 items-start">
           <label className="flex-1">
             <div className="flex items-center gap-3 min-h-[44px] px-4 py-2.5 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 cursor-pointer hover:border-amber-400 transition-colors">
@@ -65,7 +129,7 @@ function GenerateTab() {
                   d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
               </svg>
               <span className="text-sm text-gray-500 dark:text-gray-400">
-                {file ? file.name : 'CSV 파일 선택 (문의 로그)'}
+                {file ? file.name : 'CSV 직접 업로드'}
               </span>
             </div>
             <input
@@ -118,8 +182,12 @@ function GenerateTab() {
             <span className="text-sm font-semibold text-gray-800 dark:text-white">
               생성된 FAQ ({faqs.length}개)
             </span>
-            <button className="text-xs text-amber-600 dark:text-amber-400 hover:underline min-h-[32px] px-2">
-              전체 저장
+            <button
+              onClick={handleSaveAll}
+              disabled={saving}
+              className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 hover:underline min-h-[32px] px-2 disabled:opacity-50"
+            >
+              {saving ? <><Spinner />저장 중...</> : '전체 저장'}
             </button>
           </div>
           {faqs.map((faq, i) => (
@@ -142,11 +210,42 @@ function GenerateTab() {
 // ── 탭 2: FAQ 관리 ───────────────────────────────────────────
 
 function ManageTab() {
-  const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState(null)
-  const [faqs,    setFaqs]    = useState([])
+  const [loading,   setLoading]   = useState(false)
+  const [error,     setError]     = useState(null)
+  const [faqs,      setFaqs]      = useState([])
+  const [editingId, setEditingId] = useState(null)
+  const [editForm,  setEditForm]  = useState({})
 
-  // TODO: useEffect — GET /api/cs/faq 로 기존 FAQ 로드
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await getFaqs()
+        setFaqs(data.items)
+      } catch (e) {
+        setError(e.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
+  function startEdit(faq) {
+    setEditingId(faq.id)
+    setEditForm({ category: faq.category, question: faq.question, answer: faq.answer })
+  }
+
+  async function handleUpdate(faqId) {
+    try {
+      const updated = await updateFaq(faqId, editForm)
+      setFaqs(prev => prev.map(f => f.id === faqId ? { ...f, ...updated } : f))
+      setEditingId(null)
+    } catch (e) {
+      setError(e.message)
+    }
+  }
 
   return (
     <div>
@@ -171,24 +270,54 @@ function ManageTab() {
       {!loading && faqs.length > 0 && (
         <div className="flex flex-col gap-3">
           {faqs.map(faq => (
-            <div key={faq.id} className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 font-medium">
-                    {faq.category}
-                  </span>
-                  {faq.flagged && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 font-medium">
-                      업데이트 필요
-                    </span>
-                  )}
+            <div key={faq.id} className="rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+              {editingId === faq.id ? (
+                <div className="flex flex-col gap-2">
+                  <input
+                    value={editForm.category}
+                    onChange={e => setEditForm(p => ({ ...p, category: e.target.value }))}
+                    className="text-xs rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-400 w-32"
+                  />
+                  <input
+                    value={editForm.question}
+                    onChange={e => setEditForm(p => ({ ...p, question: e.target.value }))}
+                    className="text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                  />
+                  <textarea
+                    value={editForm.answer}
+                    onChange={e => setEditForm(p => ({ ...p, answer: e.target.value }))}
+                    rows={3}
+                    className="text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-amber-400"
+                  />
+                  <div className="flex gap-2">
+                    <button onClick={() => handleUpdate(faq.id)} className="min-h-[32px] px-3 text-xs rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-medium">저장</button>
+                    <button onClick={() => setEditingId(null)} className="min-h-[32px] px-3 text-xs rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">취소</button>
+                  </div>
                 </div>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Q. {faq.question}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">A. {faq.answer}</p>
-              </div>
-              <button className="shrink-0 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 min-h-[32px] px-2">
-                수정
-              </button>
+              ) : (
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 font-medium">
+                        {faq.category}
+                      </span>
+                      {faq.flagged && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 font-medium">
+                          업데이트 필요
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Q. {faq.question}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">A. {faq.answer}</p>
+                  </div>
+                  <button
+                    onClick={() => startEdit(faq)}
+                    className="shrink-0 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 min-h-[32px] px-2"
+                  >
+                    수정
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
