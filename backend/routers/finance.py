@@ -15,6 +15,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from services.finance.finance_ocr_service import analyze_receipt
+from services.finance.finance_account_service import suggest_account_code
 from database import get_connection
 
 router = APIRouter()
@@ -40,7 +41,14 @@ class SaveTransactionsRequest(BaseModel):
     receipt_date: Optional[str] = None
     vendor: str = ""
     image_path: Optional[str] = None   # OCR 저장 시 반환된 서버 경로
+    department: Optional[str] = None   # 로그인 세션에서 전달
+    emp_id: Optional[str] = None       # 로그인 세션에서 전달
     items: list[TransactionItem]
+
+
+class SuggestAccountRequest(BaseModel):
+    vendor: str = ""
+    notes: str = ""
 
 
 class UpdateTransactionRequest(BaseModel):
@@ -157,8 +165,9 @@ def save_transactions(body: SaveTransactionsRequest):
                 """
                 INSERT INTO finance_transactions
                     (receipt_date, item, amount, tax_amount,
-                     account_code, vendor, memo, ai_confidence, raw_json, image_path)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     account_code, vendor, memo, ai_confidence, raw_json, image_path,
+                     department, emp_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id, total_amount, created_at
                 """,
                 (
@@ -172,6 +181,8 @@ def save_transactions(body: SaveTransactionsRequest):
                     item.confidence,
                     json.dumps(item.model_dump(), ensure_ascii=False),
                     body.image_path,
+                    body.department,
+                    body.emp_id,
                 ),
             )
             row = cur.fetchone()
@@ -187,6 +198,8 @@ def save_transactions(body: SaveTransactionsRequest):
                 "memo":         item.memo,
                 "confidence":   item.confidence,
                 "image_path":   body.image_path,
+                "department":   body.department,
+                "emp_id":       body.emp_id,
                 "status":       "pending",
                 "created_at":   str(row[2]),
             })
@@ -286,6 +299,7 @@ def list_transactions(
     status:       Optional[str]  = Query(default=None),
     date_from:    Optional[str]  = Query(default=None),
     date_to:      Optional[str]  = Query(default=None),
+    department:   Optional[str]  = Query(default=None),
 ):
     """
     DB에 저장된 전표 목록을 반환합니다.
@@ -297,10 +311,14 @@ def list_transactions(
       status       (str, optional) — 'pending' | 'confirmed'
       date_from    (str YYYY-MM-DD, optional)
       date_to      (str YYYY-MM-DD, optional)
+      department   (str, optional) — 부서별 격리 조회
     """
     where_clauses = []
     params = []
 
+    if department:
+        where_clauses.append("department = %s")
+        params.append(department)
     if account_code:
         where_clauses.append("account_code = %s")
         params.append(account_code)
@@ -326,7 +344,8 @@ def list_transactions(
         cur.execute(
             f"""
             SELECT id, receipt_date, item, amount, tax_amount, total_amount,
-                   account_code, vendor, memo, ai_confidence, status, image_path, created_at
+                   account_code, vendor, memo, ai_confidence, status, image_path, created_at,
+                   department, emp_id
             FROM finance_transactions
             {where_sql}
             ORDER BY created_at DESC
@@ -360,10 +379,27 @@ def list_transactions(
                 "status":       r[10],
                 "image_path":   r[11],
                 "created_at":   str(r[12]),
+                "department":   r[13],
+                "emp_id":       r[14],
             }
             for r in rows
         ],
     }
+
+
+# ──────────────────────────────────────────────────────────────
+# POST /api/finance/suggest-account  — AI 계정과목 추천
+# ──────────────────────────────────────────────────────────────
+@router.post("/suggest-account")
+def suggest_account(body: SuggestAccountRequest):
+    """
+    가맹점명과 지출내역을 바탕으로 AI가 계정과목을 추천합니다.
+    """
+    try:
+        code = suggest_account_code(body.vendor, body.notes)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"AI 추천 실패: {str(e)}")
+    return {"account_code": code}
 
 
 # ──────────────────────────────────────────────────────────────

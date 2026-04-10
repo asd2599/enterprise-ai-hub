@@ -4,8 +4,9 @@ import Breadcrumb from '../../../components/layout/Breadcrumb'
 import {
   analyzeReceipt, saveTransactions, getTransactions,
   updateTransaction, confirmTransaction, exportConfirmedExcel,
-  getImageUrl,
+  getImageUrl, suggestAccountCode,
 } from '../../../api/finance'
+import { getAuthSession } from '../../../api/auth'
 
 const ACCOUNT_CODES = [
   '접대비', '복리후생비', '소모품비', '여비교통비', '통신비',
@@ -93,9 +94,255 @@ function ImageModal({ src, onClose }) {
   )
 }
 
+// ── 수기 입력 모달 ───────────────────────────────────────────
+
+function ManualEntryModal({ onClose, onSaved, session }) {
+  const today = new Date().toISOString().slice(0, 10)
+  const [form, setForm] = useState({
+    receipt_date: today,
+    vendor: '',
+    item: '',
+    amount: '',
+    tax_amount: '',
+    account_code: '기타비용',
+    memo: '',
+  })
+  const [suggesting, setSuggesting] = useState(false)
+  const [saving, setSaving]         = useState(false)
+  const [error, setError]           = useState(null)
+
+  function setField(key, value) {
+    setForm(prev => ({ ...prev, [key]: value }))
+  }
+
+  async function handleSuggest() {
+    if (!form.vendor && !form.memo) return
+    setSuggesting(true)
+    setError(null)
+    try {
+      const res = await suggestAccountCode(form.vendor, form.memo)
+      setField('account_code', res.account_code)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setSuggesting(false)
+    }
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    const amount    = Number(form.amount)
+    const taxAmount = Number(form.tax_amount) || 0
+    if (!form.item || !amount) {
+      setError('항목명과 공급가액은 필수입니다.')
+      return
+    }
+    setSaving(true)
+    setError(null)
+    try {
+      const data = await saveTransactions({
+        receipt_date: form.receipt_date,
+        vendor:       form.vendor,
+        image_path:   null,
+        department:   session?.employee?.department || null,
+        emp_id:       session?.employee?.employee_id || null,
+        items: [{
+          item:         form.item,
+          amount,
+          tax_amount:   taxAmount,
+          account_code: form.account_code,
+          memo:         form.memo,
+          confidence:   0,
+        }],
+      })
+      onSaved(data.saved)
+      onClose()
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* 모달 헤더 */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="text-base font-semibold text-gray-900">수기 전표 등록</h2>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400
+              hover:text-gray-600 hover:bg-gray-100 text-xl transition-colors"
+          >
+            ×
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5">
+              <p className="text-xs text-red-700">{error}</p>
+            </div>
+          )}
+
+          {/* 결제일자 */}
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">결제일자 <span className="text-red-400">*</span></label>
+            <input
+              type="date"
+              value={form.receipt_date}
+              onChange={e => setField('receipt_date', e.target.value)}
+              required
+              className="w-full text-sm rounded-lg border border-gray-200 px-3 py-2
+                min-h-[40px] focus:outline-none focus:ring-1 focus:ring-blue-400"
+            />
+          </div>
+
+          {/* 가맹점명 */}
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">가맹점명</label>
+            <input
+              type="text"
+              value={form.vendor}
+              onChange={e => setField('vendor', e.target.value)}
+              placeholder="예: 스타벅스"
+              className="w-full text-sm rounded-lg border border-gray-200 px-3 py-2
+                min-h-[40px] focus:outline-none focus:ring-1 focus:ring-blue-400"
+            />
+          </div>
+
+          {/* 항목명 */}
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">항목명 <span className="text-red-400">*</span></label>
+            <input
+              type="text"
+              value={form.item}
+              onChange={e => setField('item', e.target.value)}
+              placeholder="예: 커피 외 2건"
+              required
+              className="w-full text-sm rounded-lg border border-gray-200 px-3 py-2
+                min-h-[40px] focus:outline-none focus:ring-1 focus:ring-blue-400"
+            />
+          </div>
+
+          {/* 금액 */}
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-xs text-gray-500 mb-1">공급가액 <span className="text-red-400">*</span></label>
+              <input
+                type="number"
+                value={form.amount}
+                onChange={e => setField('amount', e.target.value)}
+                placeholder="0"
+                required
+                min={0}
+                className="w-full text-sm rounded-lg border border-gray-200 px-3 py-2
+                  min-h-[40px] focus:outline-none focus:ring-1 focus:ring-blue-400"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs text-gray-500 mb-1">부가세</label>
+              <input
+                type="number"
+                value={form.tax_amount}
+                onChange={e => setField('tax_amount', e.target.value)}
+                placeholder="0"
+                min={0}
+                className="w-full text-sm rounded-lg border border-gray-200 px-3 py-2
+                  min-h-[40px] focus:outline-none focus:ring-1 focus:ring-blue-400"
+              />
+            </div>
+          </div>
+
+          {/* 계정과목 + AI 추천 */}
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">계정과목</label>
+            <div className="flex gap-2">
+              <select
+                value={form.account_code}
+                onChange={e => setField('account_code', e.target.value)}
+                className="flex-1 text-sm rounded-lg border border-gray-200 px-3 py-2
+                  min-h-[40px] focus:outline-none focus:ring-1 focus:ring-blue-400"
+              >
+                {ACCOUNT_CODES.map(code => <option key={code} value={code}>{code}</option>)}
+              </select>
+              <button
+                type="button"
+                onClick={handleSuggest}
+                disabled={suggesting || (!form.vendor && !form.memo)}
+                className="min-h-[40px] px-3 py-2 rounded-lg border border-blue-300 text-blue-600
+                  text-xs font-medium hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed
+                  transition-colors whitespace-nowrap flex items-center gap-1"
+              >
+                {suggesting ? <Spinner /> : (
+                  <>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    AI 추천
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* 지출내역/비고 */}
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">지출내역/비고</label>
+            <textarea
+              value={form.memo}
+              onChange={e => setField('memo', e.target.value)}
+              placeholder="지출 목적 등 상세 내용"
+              rows={2}
+              className="w-full text-sm rounded-lg border border-gray-200 px-3 py-2
+                focus:outline-none focus:ring-1 focus:ring-blue-400 resize-none"
+            />
+          </div>
+
+          {/* 합계 미리보기 */}
+          {form.amount && (
+            <div className="rounded-lg bg-gray-50 px-4 py-2.5 flex justify-between items-center">
+              <span className="text-xs text-gray-500">합계</span>
+              <span className="text-sm font-semibold text-gray-900 tabular-nums">
+                {(Number(form.amount) + Number(form.tax_amount || 0)).toLocaleString()}원
+              </span>
+            </div>
+          )}
+
+          {/* 버튼 */}
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 min-h-[44px] rounded-xl border border-gray-200 text-sm
+                text-gray-500 hover:bg-gray-100 transition-colors"
+            >
+              취소
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 min-h-[44px] rounded-xl bg-blue-600 hover:bg-blue-700
+                disabled:bg-blue-400 text-white text-sm font-semibold transition-colors
+                flex items-center justify-center gap-2"
+            >
+              {saving ? <><Spinner />저장 중...</> : '전표 등록'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // ── 탭 1: OCR 분석 ───────────────────────────────────────────
 
-function OcrTab() {
+function OcrTab({ session }) {
   const [isDragging, setIsDragging]       = useState(false)
   const [file, setFile]                   = useState(null)
   const [previewUrl, setPreviewUrl]       = useState(null)   // 로컬 미리보기 URL
@@ -161,7 +408,12 @@ function OcrTab() {
         ...r,
         account_code: editMap[i] ?? r.account_code,
       }))
-      const data = await saveTransactions({ ...receiptMeta, items })
+      const data = await saveTransactions({
+        ...receiptMeta,
+        department: session?.employee?.department || null,
+        emp_id:     session?.employee?.employee_id || null,
+        items,
+      })
       setSavedIds(data.saved.map(s => s.id))
     } catch (e) {
       setError(e.message)
@@ -376,7 +628,7 @@ const STATUS_OPTIONS = [
   { value: 'confirmed', label: '확정' },
 ]
 
-function LedgerTab() {
+function LedgerTab({ session, onManualEntry }) {
   const [items, setItems]           = useState([])
   const [total, setTotal]           = useState(0)
   const [loading, setLoading]       = useState(false)
@@ -410,6 +662,7 @@ function LedgerTab() {
       const data = await getTransactions({
         limit:        LIMIT,
         offset:       pg * LIMIT,
+        department:   session?.employee?.department || undefined,
         account_code: accountFilter || undefined,
         status:       statusFilter  || undefined,
         date_from:    dateFrom      || undefined,
@@ -423,7 +676,7 @@ function LedgerTab() {
     } finally {
       setLoading(false)
     }
-  }, [accountFilter, statusFilter, dateFrom, dateTo])
+  }, [session, accountFilter, statusFilter, dateFrom, dateTo])
 
   useEffect(() => { fetchData(0) }, [fetchData])
 
@@ -552,7 +805,7 @@ function LedgerTab() {
 
       {!loading && items.length > 0 && (
         <div className="rounded-xl border border-gray-200 overflow-hidden">
-          {/* 테이블 요약 + 엑셀 다운로드 */}
+          {/* 테이블 요약 + 수기등록 + 엑셀 다운로드 */}
           <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between flex-wrap gap-2">
             <span className="text-sm font-semibold text-gray-900">
               전체 {total.toLocaleString()}건
@@ -561,6 +814,19 @@ function LedgerTab() {
               </span>
             </span>
             <div className="flex items-center gap-2">
+              {/* 수기 등록 */}
+              <button
+                onClick={onManualEntry}
+                className="min-h-[32px] flex items-center gap-1.5 px-3 py-1.5 rounded-lg border
+                  border-gray-300 text-gray-600 bg-white hover:bg-gray-50
+                  text-xs font-medium transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                수기 등록
+              </button>
               {/* 엑셀 다운로드 — 확정 건만 */}
               <button
                 onClick={handleExcelDownload}
@@ -797,10 +1063,28 @@ const TABS = [
 ]
 
 export default function AccountantPage() {
-  const [activeTab, setActiveTab] = useState('ocr')
+  const [activeTab, setActiveTab]         = useState('ocr')
+  const [showManualModal, setShowManualModal] = useState(false)
+  const [session]                         = useState(() => getAuthSession())
+
+  const dept     = session?.employee?.department || ''
+  const empName  = session?.employee?.name       || ''
+
+  function handleManualSaved() {
+    // 수기 등록 후 전표 내역 탭으로 이동하고 목록 새로고침
+    setActiveTab('ledger')
+  }
 
   return (
     <div>
+      {showManualModal && (
+        <ManualEntryModal
+          session={session}
+          onClose={() => setShowManualModal(false)}
+          onSaved={handleManualSaved}
+        />
+      )}
+
       <Breadcrumb
         crumbs={[
           { label: '경영지원 및 관리', to: '/backoffice' },
@@ -811,21 +1095,34 @@ export default function AccountantPage() {
 
       {/* 헤더 */}
       <div className="mt-4 mb-6 rounded-xl border p-5 bg-blue-50 border-blue-200">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-blue-600 text-white text-xs font-bold shrink-0">
-            경리
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-blue-600 text-white text-xs font-bold shrink-0">
+              경리
+            </div>
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-blue-600">
+                Back-Office · 재무/회계팀
+              </span>
+              <h1 className="text-xl font-bold text-gray-900 leading-tight">
+                영수증 OCR · 전표 자동 분류
+              </h1>
+            </div>
           </div>
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-blue-600">
-              Back-Office · 재무/회계팀
-            </span>
-            <h1 className="text-xl font-bold text-gray-900 leading-tight">
-              영수증 OCR · 전표 자동 분류
-            </h1>
-          </div>
+          {/* 로그인 세션 정보 */}
+          {(empName || dept) && (
+            <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-100 px-3 py-1.5 rounded-lg">
+              <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <span>{empName && `${empName} · `}{dept}</span>
+            </div>
+          )}
         </div>
         <p className="text-sm text-gray-500 mt-2">
           영수증을 업로드하면 AI가 계정과목을 분류합니다. 검토 후 최종 확정하세요.
+          {dept && <span className="ml-1 text-blue-600 font-medium">({dept} 전표만 표시)</span>}
         </p>
       </div>
 
@@ -845,10 +1142,28 @@ export default function AccountantPage() {
             {tab.label}
           </button>
         ))}
+        {/* 수기 등록 — 탭 우측 */}
+        <div className="ml-auto pb-px flex items-end">
+          <button
+            onClick={() => setShowManualModal(true)}
+            className="min-h-[36px] flex items-center gap-1.5 px-4 py-1.5 rounded-lg
+              bg-gray-900 hover:bg-gray-700 text-white text-xs font-medium transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            수기 등록
+          </button>
+        </div>
       </div>
 
-      {activeTab === 'ocr'    && <OcrTab />}
-      {activeTab === 'ledger' && <LedgerTab />}
+      {activeTab === 'ocr'    && <OcrTab session={session} />}
+      {activeTab === 'ledger' && (
+        <LedgerTab
+          session={session}
+          onManualEntry={() => setShowManualModal(true)}
+        />
+      )}
     </div>
   )
 }
