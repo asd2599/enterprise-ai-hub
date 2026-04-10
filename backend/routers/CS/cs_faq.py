@@ -15,10 +15,11 @@ router = APIRouter()
 # 요청 스키마
 # ──────────────────────────────────────────────────────────────
 class FaqUpdateRequest(BaseModel):
-    category: Optional[str] = None
-    question: Optional[str] = None
-    answer:   Optional[str] = None
-    flagged:  Optional[bool] = None
+    category:         Optional[str]  = None
+    question:         Optional[str]  = None
+    answer:           Optional[str]  = None
+    flagged:          Optional[bool] = None
+    suggested_answer: Optional[str]  = None  # None이면 유지, "" 빈 문자열이면 초기화
 
 
 # ──────────────────────────────────────────────────────────────
@@ -94,10 +95,10 @@ def list_faqs(
 
         cur.execute(
             f"""
-            SELECT id, category, question, answer, flagged, created_at, updated_at
+            SELECT id, category, question, answer, flagged, suggested_answer, created_at, updated_at
             FROM cs_faqs
             {where_sql}
-            ORDER BY category, created_at DESC
+            ORDER BY flagged DESC, category, created_at DESC
             LIMIT %s OFFSET %s
             """,
             params + [limit, offset],
@@ -113,13 +114,14 @@ def list_faqs(
         "total": total,
         "items": [
             {
-                "id":         r[0],
-                "category":   r[1],
-                "question":   r[2],
-                "answer":     r[3],
-                "flagged":    r[4],
-                "created_at": str(r[5]),
-                "updated_at": str(r[6]),
+                "id":               r[0],
+                "category":         r[1],
+                "question":         r[2],
+                "answer":           r[3],
+                "flagged":          r[4],
+                "suggested_answer": r[5],
+                "created_at":       str(r[6]),
+                "updated_at":       str(r[7]),
             }
             for r in rows
         ],
@@ -183,13 +185,15 @@ def update_faq(faq_id: int, body: FaqUpdateRequest):
     params      = []
 
     if body.category is not None:
-        set_clauses.append("category = %s"); params.append(body.category)
+        set_clauses.append("category = %s");          params.append(body.category)
     if body.question is not None:
-        set_clauses.append("question = %s"); params.append(body.question)
+        set_clauses.append("question = %s");          params.append(body.question)
     if body.answer is not None:
-        set_clauses.append("answer = %s");   params.append(body.answer)
+        set_clauses.append("answer = %s");            params.append(body.answer)
     if body.flagged is not None:
-        set_clauses.append("flagged = %s");  params.append(body.flagged)
+        set_clauses.append("flagged = %s");           params.append(body.flagged)
+    if body.suggested_answer is not None:
+        set_clauses.append("suggested_answer = %s");  params.append(body.suggested_answer or None)
 
     if not set_clauses:
         raise HTTPException(status_code=400, detail="수정할 항목이 없습니다.")
@@ -203,7 +207,7 @@ def update_faq(faq_id: int, body: FaqUpdateRequest):
             UPDATE cs_faqs
             SET {', '.join(set_clauses)}, updated_at = NOW()
             WHERE id = %s
-            RETURNING id, category, question, answer, flagged, updated_at
+            RETURNING id, category, question, answer, flagged, suggested_answer, updated_at
             """,
             params,
         )
@@ -219,10 +223,11 @@ def update_faq(faq_id: int, body: FaqUpdateRequest):
         conn.close()
 
     return {
-        "id":         row[0],
-        "category":   row[1],
-        "question":   row[2],
-        "answer":     row[3],
-        "flagged":    row[4],
-        "updated_at": str(row[5]),
+        "id":               row[0],
+        "category":         row[1],
+        "question":         row[2],
+        "answer":           row[3],
+        "flagged":          row[4],
+        "suggested_answer": row[5],
+        "updated_at":       str(row[6]),
     }

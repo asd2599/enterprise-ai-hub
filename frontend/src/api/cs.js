@@ -146,6 +146,27 @@ export async function updateFaq(faqId, data) {
   return handleResponse(res)
 }
 
+// ── 정책 업로드 ──────────────────────────────────────────────
+
+/**
+ * 정책 문서(docx) 업로드 → FAQ 영향 분석 → flagged 처리
+ * @param {File} file  .docx 파일
+ * @returns {{
+ *   updated_count: number,
+ *   flagged_faqs: Array<{ id: number, question: string, suggested_answer: string, reason: string }>,
+ *   message?: string
+ * }}
+ */
+export async function uploadPolicy(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await fetch(`${BASE_URL}/api/cs/policy/upload`, {
+    method: 'POST',
+    body: formData,
+  })
+  return handleResponse(res)
+}
+
 // ── VOC 분석 ─────────────────────────────────────────────────
 
 /**
