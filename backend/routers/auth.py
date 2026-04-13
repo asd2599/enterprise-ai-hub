@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from database import get_connection
+from services.hr_notification_service import create_notification
 
 router = APIRouter()
 
@@ -59,6 +60,7 @@ class UpdateProfileRequest(BaseModel):
 
 class UpdateEmployeeDepartmentRequest(BaseModel):
     department: str
+    reason: str
 
 
 @router.get("/profile/{employee_id}")
@@ -140,6 +142,8 @@ def reject_employee(employee_id: str):
         cur.close()
         conn.close()
 
+    create_notification(f"({row[0]}) 계정의 승인 요청이 거부되었습니다.", "계정 승인 관리")
+
     return {
         "employee_id": row[0],
         "name": row[1],
@@ -195,14 +199,29 @@ def list_employees():
 def update_employee_department(employee_id: str, body: UpdateEmployeeDepartmentRequest):
     employee_id = employee_id.strip()
     department = body.department.strip()
+    reason = body.reason.strip()
 
-    if not employee_id or not department:
-        raise HTTPException(status_code=400, detail="사번과 변경할 부서는 모두 필수입니다.")
+    if not employee_id or not department or not reason:
+        raise HTTPException(status_code=400, detail="사번, 변경할 부서, 변경 사유는 모두 필수입니다.")
 
     conn = get_connection()
     cur = conn.cursor()
 
     try:
+        cur.execute(
+            """
+            SELECT name, department
+            FROM info_employees
+            WHERE employee_id = %s
+              AND is_verified = TRUE
+            """,
+            (employee_id,),
+        )
+        current_row = cur.fetchone()
+        if not current_row:
+            raise HTTPException(status_code=404, detail="부서를 변경할 사원 계정을 찾을 수 없습니다.")
+
+        previous_department = current_row[1]
         cur.execute(
             """
             UPDATE info_employees
@@ -224,6 +243,11 @@ def update_employee_department(employee_id: str, body: UpdateEmployeeDepartmentR
     finally:
         cur.close()
         conn.close()
+
+    create_notification(
+        f"{row[1]}님의 부서를 '{previous_department}'에서 '{row[2]}'으로 변경했습니다. 변경 사유: {reason}",
+        "부서",
+    )
 
     return {
         "employee_id": row[0],
@@ -377,6 +401,8 @@ def approve_employee(body: ApproveEmployeeRequest):
     finally:
         cur.close()
         conn.close()
+
+    create_notification(f"({row[0]}) 계정이 승인되었습니다.", "계정 승인 관리")
 
     return {
         "employee_id": row[0],
