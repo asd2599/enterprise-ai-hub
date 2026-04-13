@@ -35,6 +35,8 @@ import StrategyPage       from './pages/frontoffice/StrategyPage'
 import SalesPage          from './pages/frontoffice/SalesPage'
 import MarketingPage      from './pages/frontoffice/MarketingPage'
 import CopywritingPage   from './pages/frontoffice/Marketing/CopywritingPage'
+import SnsPage           from './pages/frontoffice/Marketing/SnsPage'
+import PressPage         from './pages/frontoffice/Marketing/PressPage'
 import CSPage             from './pages/frontoffice/CSPage'
 import ResponseDraftPage  from './pages/frontoffice/CS/ResponseDraftPage'
 import FaqPage            from './pages/frontoffice/CS/FaqPage'
@@ -86,6 +88,8 @@ function App() {
           <Route path="frontoffice/sales"     element={<SalesPage />} />
           <Route path="frontoffice/marketing"              element={<MarketingPage />} />
           <Route path="frontoffice/marketing/copywriting" element={<CopywritingPage />} />
+          <Route path="frontoffice/marketing/sns"         element={<SnsPage />} />
+          <Route path="frontoffice/marketing/press"       element={<PressPage />} />
           <Route path="frontoffice/cs"                  element={<CSPage />} />
           <Route path="frontoffice/cs/response"        element={<ResponseDraftPage />} />
           <Route path="frontoffice/cs/faq"             element={<FaqPage />} />

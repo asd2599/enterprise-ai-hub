@@ -25,6 +25,51 @@ async function handleResponse(res) {
  *   banner: string
  * }}
  */
+/**
+ * SNS 콘텐츠 자동화 — 인스타그램·블로그 동시 생성
+ * @param {{
+ *   topic: string,
+ *   message: string,
+ *   channel?: 'instagram'|'blog'|'both',
+ *   keywords?: string,
+ *   extra?: string
+ * }} params
+ * @returns {{
+ *   instagram?: { hook, body, cta, hashtags: { popular, niche, brand } },
+ *   blog?: { seo_title, meta_description, sections, internal_link_suggestions }
+ * }}
+ */
+export async function generateSns(params) {
+  const res = await fetch(`${BASE_URL}/api/marketing/sns/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  })
+  return handleResponse(res)
+}
+
+/**
+ * 보도자료 전문 + 이메일 초안 + SNS 요약문 생성
+ * @param {{
+ *   press_type: '신제품'|'이벤트'|'실적',
+ *   facts: string,
+ *   quote_person?: string,
+ *   media_type?: 'IT'|'경제'|'생활'
+ * }} params
+ * @returns {{
+ *   headline, release_date, body, quote,
+ *   email_subject, email_body, sns_linkedin, sns_x
+ * }}
+ */
+export async function generatePress(params) {
+  const res = await fetch(`${BASE_URL}/api/marketing/press/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  })
+  return handleResponse(res)
+}
+
 export async function generateCopy(params) {
   const res = await fetch(`${BASE_URL}/api/marketing/copy/generate`, {
     method: 'POST',
