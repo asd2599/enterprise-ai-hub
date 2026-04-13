@@ -12,33 +12,35 @@ client = OpenAI(api_key=settings.openai_api_key)
 
 SENTIMENT_PROMPT = """
 다음 고객 문의를 읽고 감성을 분류하세요.
-JSON으로만 응답하세요. 다른 텍스트 없이 JSON만 반환하세요.
-
-{"sentiment": "긍정 | 중립 | 부정"}
+반드시 아래 셋 중 하나만 값으로 사용하세요: 긍정, 중립, 부정
+JSON으로만 응답하세요. 예시: {{"sentiment": "부정"}}
 
 문의: {inquiry}
 """
 
 INQUIRY_TYPE_PROMPT = """
 다음 고객 문의의 유형을 분류하세요.
-JSON으로만 응답하세요.
-
-{"type": "배송 | 반품/교환 | 환불 | 결제 | 상품 | 주문 | 회원/계정 | 혜택 | 기타"}
+반드시 아래 목록 중 하나만 값으로 사용하세요: 배송, 반품/교환, 환불, 결제, 상품, 주문, 회원/계정, 혜택, 기타
+JSON으로만 응답하세요. 예시: {{"type": "반품/교환"}}
 
 문의: {inquiry}
 """
 
+VALID_TYPES = {"배송", "반품/교환", "환불", "결제", "상품", "주문", "회원/계정", "혜택", "기타"}
+
 REPORT_SUMMARY_PROMPT = """
-아래 CS VOC 분석 결과를 바탕으로 팀장 보고용 3줄 요약을 작성하세요.
-각 줄은 핵심 수치와 의미를 포함해야 합니다.
+아래 CS VOC 분석 결과를 바탕으로 팀장 보고용 요약을 작성하세요.
 
 분석 결과:
 - 총 문의 건수: {total_count}건
 - 전주 대비: {change_str}
 - 부정 감성 비율: {negative_pct}%
-- 급증 이슈: {top_issues_str}
+- 주요 급증 이슈: {top_issues_str}
 
-3줄 요약만 작성하세요 (번호 없이, 줄바꿈으로 구분).
+작성 형식 (각 항목은 빈 줄로 구분, 번호·항목명 없이 자연스러운 문장으로):
+1. 전체 현황 요약 — 총 건수·전주 대비 증감·부정 감성 비율을 2~3문장으로
+2. 급증 이슈 종합 — 이슈들을 개별 나열하지 말고, 전체 흐름과 공통 원인을 2~3문장으로 요약
+3. 조치 제안 — 우선순위 중심으로 1~2문장
 """
 
 
@@ -54,8 +56,22 @@ def _classify_batch(inquiries: list[str], prompt_template: str, key: str) -> lis
                 messages=[{"role": "user", "content": prompt_template.format(inquiry=text[:300])}],
                 max_tokens=50,
             )
-            data = json.loads(res.choices[0].message.content)
-            results.append(data.get(key, "기타" if key == "type" else "중립"))
+            data  = json.loads(res.choices[0].message.content)
+            value = data.get(key, "")
+            # GPT가 선택지 전체 문자열을 반환하는 경우 정규화
+            if key == "sentiment":
+                if "부정" in value:
+                    value = "부정"
+                elif "긍정" in value:
+                    value = "긍정"
+                else:
+                    value = "중립"
+            elif key == "type":
+                if value not in VALID_TYPES:
+                    # 유효한 유형 중 포함된 것 탐색
+                    matched = next((t for t in VALID_TYPES if t in value), "기타")
+                    value = matched
+            results.append(value or ("기타" if key == "type" else "중립"))
         except Exception:
             results.append("기타" if key == "type" else "중립")
 
@@ -72,14 +88,34 @@ def _classify_batch(inquiries: list[str], prompt_template: str, key: str) -> lis
 
 
 def _parse_csv(csv_bytes: bytes) -> list[str]:
-    """CSV 첫 번째 컬럼에서 문의 텍스트 추출"""
+    """CSV에서 문의 텍스트 컬럼을 찾아 추출"""
     text   = csv_bytes.decode("utf-8-sig")
     reader = csv.reader(io.StringIO(text))
     rows   = list(reader)
     if not rows:
         return []
-    start = 1 if any(kw in rows[0][0] for kw in ["문의", "내용", "질문", "inquiry", "text"]) else 0
-    return [row[0].strip() for row in rows[start:] if row and row[0].strip()]
+
+    # 헤더 행 전체를 스캔해 문의 텍스트 컬럼 인덱스 탐색
+    # "유형", "분류" 등 카테고리 컬럼은 제외하고 탐색
+    INQUIRY_KEYWORDS = ["고객문의원문", "문의원문", "문의내용", "원문", "inquiry_text", "inquiry", "text", "내용", "질문"]
+    EXCLUDE_KEYWORDS = ["유형", "분류", "타입", "type"]
+    inquiry_col = 0
+    has_header  = False
+    for i, col in enumerate(rows[0]):
+        col_stripped = col.strip()
+        if any(ex in col_stripped for ex in EXCLUDE_KEYWORDS):
+            continue
+        if any(kw in col_stripped for kw in INQUIRY_KEYWORDS):
+            inquiry_col = i
+            has_header  = True
+            break
+
+    start = 1 if has_header else 0
+    return [
+        row[inquiry_col].strip()
+        for row in rows[start:]
+        if len(row) > inquiry_col and row[inquiry_col].strip()
+    ]
 
 
 def analyze_voc(
@@ -170,8 +206,13 @@ def analyze_voc(
         })
 
     # 팀장 보고 요약
-    change_str     = f"{((total_count - prev_count) / prev_count * 100):+.1f}%" if prev_count else "비교 데이터 없음"
-    top_issues_str = ", ".join(f"{i['type']} {i['change_pct']:+.1f}%" for i in top_issues if i["change_pct"] is not None) or "해당 없음"
+    change_str = f"{((total_count - prev_count) / prev_count * 100):+.1f}%" if prev_count else "비교 데이터 없음"
+
+    top_issues_str = ", ".join(
+        f"{i['type']} {i['count']}건({i['change_pct']:+.1f}%)" if i["change_pct"] is not None
+        else f"{i['type']} {i['count']}건"
+        for i in top_issues
+    ) or "해당 없음"
 
     summary_res = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -184,7 +225,7 @@ def analyze_voc(
                 top_issues_str=top_issues_str,
             ),
         }],
-        max_tokens=200,
+        max_tokens=600,
     )
     summary = summary_res.choices[0].message.content.strip()
 

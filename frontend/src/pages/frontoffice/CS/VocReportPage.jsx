@@ -78,8 +78,7 @@ export default function VocReportPage() {
     setImporting(true)
     setError(null)
     try {
-      const csvFile = await exportInquiriesCsv({ dateFrom, dateTo })
-      setFile(csvFile)
+      await exportInquiriesCsv({ dateFrom, dateTo })
     } catch (e) {
       setError(e.message)
     } finally {
@@ -296,7 +295,7 @@ export default function VocReportPage() {
                         <span className="text-xs font-semibold tabular-nums text-gray-500 dark:text-gray-400">
                           {issue.count?.toLocaleString()}건
                         </span>
-                        {issue.change_pct !== undefined && (
+                        {issue.change_pct != null && (
                           <span className={`text-xs font-semibold tabular-nums ${changeColor(issue.change_pct)}`}>
                             {issue.change_pct > 0 ? '+' : ''}{issue.change_pct}%
                           </span>
