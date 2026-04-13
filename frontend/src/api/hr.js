@@ -1,4 +1,14 @@
+import { apiRequest } from './client'
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+const PENDING_ENDPOINT =
+  import.meta.env.VITE_AUTH_PENDING_ENDPOINT || '/api/auth/pending'
+const EMPLOYEES_ENDPOINT =
+  import.meta.env.VITE_AUTH_EMPLOYEES_ENDPOINT || '/api/auth/employees'
+const APPROVE_ENDPOINT =
+  import.meta.env.VITE_AUTH_APPROVE_ENDPOINT || '/api/auth/approve'
+const REJECT_ENDPOINT =
+  import.meta.env.VITE_AUTH_REJECT_ENDPOINT || '/api/auth/reject'
 
 async function handleResponse(res) {
   if (!res.ok) {
@@ -6,6 +16,45 @@ async function handleResponse(res) {
     throw new Error(err.detail || `HTTP ${res.status}`)
   }
   return res.json()
+}
+
+export async function getPendingEmployees() {
+  const response = await apiRequest(PENDING_ENDPOINT)
+  return response.json().catch(() => ({ total: 0, items: [] }))
+}
+
+export async function getEmployees() {
+  const response = await apiRequest(EMPLOYEES_ENDPOINT)
+  return response.json().catch(() => ({ total: 0, items: [] }))
+}
+
+export async function approveEmployee(payload) {
+  const response = await apiRequest(APPROVE_ENDPOINT, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+
+  return response.json().catch(() => ({}))
+}
+
+export async function updateEmployeeDepartment(employeeId, payload) {
+  const response = await apiRequest(
+    `${EMPLOYEES_ENDPOINT}/${employeeId}/department`,
+    {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    },
+  )
+
+  return response.json().catch(() => ({}))
+}
+
+export async function rejectEmployee(employeeId) {
+  const response = await apiRequest(`${REJECT_ENDPOINT}/${employeeId}`, {
+    method: 'DELETE',
+  })
+
+  return response.json().catch(() => ({}))
 }
 
 export async function getRegulationDocuments() {
@@ -29,9 +78,12 @@ export async function getHrNotifications() {
 }
 
 export async function markHrNotificationRead(notificationId) {
-  const res = await fetch(`${BASE_URL}/api/hr/notifications/${notificationId}/read`, {
-    method: 'POST',
-  })
+  const res = await fetch(
+    `${BASE_URL}/api/hr/notifications/${notificationId}/read`,
+    {
+      method: 'POST',
+    },
+  )
   return handleResponse(res)
 }
 

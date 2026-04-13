@@ -6,7 +6,7 @@ from __future__ import annotations
 from uuid import uuid4
 
 from database import get_connection
-from services.hr_regulation_service import get_regulation_conflicts
+from services.HR.hr_regulation_service import get_regulation_conflicts
 
 HISTORY_DAYS = 50
 HISTORY_MAX_COUNT = 200

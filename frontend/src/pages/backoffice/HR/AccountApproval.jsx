@@ -4,7 +4,7 @@ import {
   approveEmployee,
   getPendingEmployees,
   rejectEmployee,
-} from '../../../api/auth';
+} from '../../../api/hr';
 import { CATEGORIES } from '../../../data/departments';
 import { IoRefresh } from 'react-icons/io5';
 

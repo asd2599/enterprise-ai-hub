@@ -113,7 +113,6 @@ const HR_TOOLS = [
       />
     ),
   },
-
   {
     id: 'pay',
     label: '급여 관리',

@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import Breadcrumb from '../../../components/layout/Breadcrumb';
 import { CATEGORIES } from '../../../data/departments';
-import { getEmployees, updateEmployeeDepartment } from '../../../api/auth';
+import { getEmployees, updateEmployeeDepartment } from '../../../api/hr';
 
 const DEPARTMENT_OPTIONS = CATEGORIES.flatMap((category) =>
   category.departments.map((department) => department.label),
@@ -164,7 +164,7 @@ export default function Departments() {
         crumbs={[
           { label: '경영지원 및 관리', to: '/backoffice' },
           { label: '인사(HR)팀', to: '/backoffice/hr' },
-          { label: 'Departments' },
+          { label: '부서' },
         ]}
       />
 
