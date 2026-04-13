@@ -20,6 +20,21 @@ const HR_TOOLS = [
     ),
   },
   {
+    id: 'humanresources',
+    label: '인사팀 알림사항',
+    description: '인사팀 공지, 마감 일정, 운영 메모를 한 화면에서 확인합니다.',
+    path: '/backoffice/hr/humanresources',
+    badge: '공지 · 일정 · 운영 메모',
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+      />
+    ),
+  },
+  {
     id: 'hire-create',
     label: '채용 공고 생성기',
     description:
@@ -67,22 +82,6 @@ const HR_TOOLS = [
     ),
   },
   {
-    id: 'regulation-chat',
-    label: '인사 규정 챗봇',
-    description:
-      '사내 규정과 제도 관련 질문에 빠르게 답변하고 참고 규정을 안내합니다.',
-    path: '/backoffice/hr/regulation-chat',
-    badge: '규정 · 제도 · Q&A',
-    icon: (
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={1.5}
-        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-      />
-    ),
-  },
-  {
     id: 'upload-regulation',
     label: '규정 문서 업로드',
     description:
@@ -98,6 +97,23 @@ const HR_TOOLS = [
       />
     ),
   },
+  {
+    id: 'regulation-chat',
+    label: '인사 규정 챗봇',
+    description:
+      '사내 규정과 제도 관련 질문에 빠르게 답변하고 참고 규정을 안내합니다.',
+    path: '/backoffice/hr/regulation-chat',
+    badge: '규정 · 제도 · Q&A',
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+      />
+    ),
+  },
+
   {
     id: 'pay',
     label: '급여 관리',
@@ -115,11 +131,11 @@ const HR_TOOLS = [
     ),
   },
   {
-    id: 'humanresources',
-    label: '전체 인원 부서 변경',
+    id: 'departments',
+    label: '부서',
     description:
       '조직 개편이나 인력 재배치에 맞춰 전체 인원의 부서를 일괄 변경합니다.',
-    path: '/backoffice/hr/humanresources',
+    path: '/backoffice/hr/departments',
     badge: '조직 변경 · 부서 이동 · 인원 관리',
     icon: (
       <path
@@ -211,7 +227,7 @@ export default function HRPage() {
           있습니다.
         </p>
         <span className="inline-block mt-3 text-xs px-2.5 py-1 rounded-full font-medium bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
-          인사 도구 11개
+          인사 도구 12개
         </span>
       </div>
 
