@@ -39,11 +39,29 @@ TABLES = [
         )
         """,
     ),
+    (
+        "hr_notifications",
+        """
+        CREATE TABLE IF NOT EXISTS hr_notifications (
+            id                SERIAL          PRIMARY KEY,
+            notification_key  VARCHAR(255)    NOT NULL UNIQUE,
+            source            VARCHAR(100)    NOT NULL,
+            message           TEXT            NOT NULL,
+            notification_type VARCHAR(50)     NOT NULL DEFAULT 'event',
+            is_active         BOOLEAN         NOT NULL DEFAULT TRUE,
+            read_at           TIMESTAMPTZ,
+            created_at        TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+            updated_at        TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+        )
+        """,
+    ),
 ]
 
 INDEXES = [
     ("idx_hr_reg_docs_active", "CREATE INDEX IF NOT EXISTS idx_hr_reg_docs_active ON hr_regulation_documents (is_active, deleted_at)"),
     ("idx_hr_reg_docs_created_at", "CREATE INDEX IF NOT EXISTS idx_hr_reg_docs_created_at ON hr_regulation_documents (created_at DESC)"),
+    ("idx_hr_notifications_active_read", "CREATE INDEX IF NOT EXISTS idx_hr_notifications_active_read ON hr_notifications (is_active, read_at)"),
+    ("idx_hr_notifications_created_at", "CREATE INDEX IF NOT EXISTS idx_hr_notifications_created_at ON hr_notifications (created_at DESC)"),
 ]
 
 

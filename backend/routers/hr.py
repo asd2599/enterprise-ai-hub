@@ -6,9 +6,16 @@ from typing import Optional
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
+from services.hr_notification_service import (
+    create_notification,
+    list_notifications,
+    mark_notification_read,
+    mark_notifications_read,
+)
 from services.hr_regulation_service import (
     answer_regulation_question,
     delete_regulation_document,
+    get_regulation_conflicts,
     list_active_regulation_documents,
     get_regulation_status,
     save_regulation_documents,
@@ -21,6 +28,40 @@ class RegulationChatRequest(BaseModel):
     question: str
 
 
+class NotificationReadAllRequest(BaseModel):
+    ids: list[int]
+
+
+@router.get("/notifications")
+def get_notifications():
+    try:
+        return {"items": list_notifications()}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"알림 목록 조회 실패: {str(exc)}") from exc
+
+
+@router.post("/notifications/{notification_id}/read")
+def read_notification(notification_id: int):
+    try:
+        item = mark_notification_read(notification_id)
+        if not item:
+            raise HTTPException(status_code=404, detail="읽음 처리할 알림을 찾을 수 없습니다.")
+        return {"item": item}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"알림 읽음 처리 실패: {str(exc)}") from exc
+
+
+@router.post("/notifications/read-all")
+def read_all_notifications(body: NotificationReadAllRequest):
+    try:
+        updated = mark_notifications_read(body.ids)
+        return {"updated": updated}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"전체 읽음 처리 실패: {str(exc)}") from exc
+
+
 @router.get("/regulations/status")
 def regulation_status():
     return get_regulation_status()
@@ -29,6 +70,16 @@ def regulation_status():
 @router.get("/regulations")
 def list_regulations():
     return {"items": list_active_regulation_documents()}
+
+
+@router.get("/regulations/conflicts")
+def regulation_conflicts():
+    try:
+        return get_regulation_conflicts()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"규정 충돌 조회 실패: {str(exc)}") from exc
 
 
 @router.post("/regulations/upload")
@@ -61,6 +112,9 @@ async def upload_regulation(
                 "department": uploader_department.strip() if uploader_department else None,
             },
         )
+        if items:
+            file_names = ", ".join(f"'{item['file_name']}'" for item in items)
+            create_notification(f"{file_names} 규정 문서를 업로드했습니다.", "규정 문서 업로드")
         return {"items": items}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -71,7 +125,13 @@ async def upload_regulation(
 @router.delete("/regulations/{document_id}")
 def delete_regulation(document_id: int):
     try:
-        return delete_regulation_document(document_id)
+        result = delete_regulation_document(document_id)
+        if result.get("deleted_file_name"):
+            create_notification(
+                f"'{result['deleted_file_name']}' 규정 문서를 삭제했습니다.",
+                "규정 문서 업로드",
+            )
+        return result
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:

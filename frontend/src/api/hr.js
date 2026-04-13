@@ -13,8 +13,34 @@ export async function getRegulationDocuments() {
   return handleResponse(res)
 }
 
+export async function getRegulationConflicts() {
+  const res = await fetch(`${BASE_URL}/api/hr/regulations/conflicts`)
+  return handleResponse(res)
+}
+
 export async function getRegulationStatus() {
   const res = await fetch(`${BASE_URL}/api/hr/regulations/status`)
+  return handleResponse(res)
+}
+
+export async function getHrNotifications() {
+  const res = await fetch(`${BASE_URL}/api/hr/notifications`)
+  return handleResponse(res)
+}
+
+export async function markHrNotificationRead(notificationId) {
+  const res = await fetch(`${BASE_URL}/api/hr/notifications/${notificationId}/read`, {
+    method: 'POST',
+  })
+  return handleResponse(res)
+}
+
+export async function markAllHrNotificationsRead(ids) {
+  const res = await fetch(`${BASE_URL}/api/hr/notifications/read-all`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  })
   return handleResponse(res)
 }
 
