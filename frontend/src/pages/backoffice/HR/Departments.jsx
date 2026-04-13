@@ -121,6 +121,7 @@ export default function Departments() {
     try {
       const updated = await updateEmployeeDepartment(employeeId, {
         department: nextDepartment,
+        reason: changeReason,
       });
 
       setEmployees((prev) =>
