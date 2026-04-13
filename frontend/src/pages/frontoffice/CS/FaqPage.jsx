@@ -40,6 +40,7 @@ function GenerateTab() {
   const [saving,  setSaving]  = useState(false)
   const [error,   setError]   = useState(null)
   const [faqs,    setFaqs]    = useState([])
+  const [selected, setSelected] = useState(new Set()) // 선택된 FAQ 인덱스
   // faqs = [{ category, question, answer }]
 
   async function handleGenerate() {
@@ -50,6 +51,7 @@ function GenerateTab() {
     try {
       const data = await generateFaqs(file, topN)
       setFaqs(data.faqs)
+      setSelected(new Set(data.faqs.map((_, i) => i))) // 생성 시 전체 선택
     } catch (e) {
       setError(e.message)
     } finally {
@@ -77,11 +79,41 @@ function GenerateTab() {
     try {
       await saveFaqs(faqs)
       setFaqs([])
+      setSelected(new Set())
     } catch (e) {
       setError(e.message)
     } finally {
       setSaving(false)
     }
+  }
+
+  async function handleSaveSelected() {
+    if (!selected.size) return
+    setSaving(true)
+    setError(null)
+    try {
+      const toSave = faqs.filter((_, i) => selected.has(i))
+      await saveFaqs(toSave)
+      const remaining = faqs.filter((_, i) => !selected.has(i))
+      setFaqs(remaining)
+      setSelected(new Set())
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function toggleSelect(i) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(i) ? next.delete(i) : next.add(i)
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    setSelected(prev => prev.size === faqs.length ? new Set() : new Set(faqs.map((_, i) => i)))
   }
 
   return (
@@ -178,27 +210,64 @@ function GenerateTab() {
       {/* FAQ 결과 */}
       {faqs.length > 0 && (
         <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-gray-800 dark:text-white">
-              생성된 FAQ ({faqs.length}개)
-            </span>
-            <button
-              onClick={handleSaveAll}
-              disabled={saving}
-              className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 hover:underline min-h-[32px] px-2 disabled:opacity-50"
-            >
-              {saving ? <><Spinner />저장 중...</> : '전체 저장'}
-            </button>
+          <div className="flex items-center justify-between gap-2">
+            {/* 왼쪽: 전체선택 + 카운트 */}
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={selected.size === faqs.length && faqs.length > 0}
+                onChange={toggleSelectAll}
+                className="w-4 h-4 rounded accent-amber-500 cursor-pointer"
+              />
+              <span className="text-sm font-semibold text-gray-800 dark:text-white">
+                생성된 FAQ ({faqs.length}개)
+              </span>
+              {selected.size > 0 && selected.size < faqs.length && (
+                <span className="text-xs text-gray-400 dark:text-gray-500">{selected.size}개 선택됨</span>
+              )}
+            </label>
+            {/* 오른쪽: 버튼 그룹 */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={handleSaveSelected}
+                disabled={saving || selected.size === 0}
+                className="flex items-center gap-1.5 text-xs bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white font-semibold rounded-lg min-h-[32px] px-3 transition-colors"
+              >
+                {saving ? <><Spinner />저장 중...</> : `선택 저장 (${selected.size})`}
+              </button>
+              <button
+                onClick={handleSaveAll}
+                disabled={saving}
+                className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 hover:underline min-h-[32px] px-2 disabled:opacity-50"
+              >
+                전체 저장
+              </button>
+            </div>
           </div>
           {faqs.map((faq, i) => (
-            <div key={i} className="rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+            <div
+              key={i}
+              onClick={() => toggleSelect(i)}
+              className={`rounded-xl border p-4 cursor-pointer transition-colors ${
+                selected.has(i)
+                  ? 'border-amber-400 dark:border-amber-600 bg-amber-50/50 dark:bg-amber-950/10'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+              }`}
+            >
               <div className="flex items-start gap-3 mb-2">
+                <input
+                  type="checkbox"
+                  checked={selected.has(i)}
+                  onChange={() => toggleSelect(i)}
+                  onClick={e => e.stopPropagation()}
+                  className="mt-0.5 w-4 h-4 rounded accent-amber-500 cursor-pointer shrink-0"
+                />
                 <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 font-medium shrink-0 mt-0.5">
                   {faq.category}
                 </span>
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">Q. {faq.question}</p>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed pl-1">A. {faq.answer}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed pl-7">A. {faq.answer}</p>
             </div>
           ))}
         </div>
