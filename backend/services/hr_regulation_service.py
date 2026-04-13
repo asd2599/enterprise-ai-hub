@@ -6,6 +6,7 @@ import re
 import zlib
 from datetime import datetime
 from io import BytesIO
+from itertools import combinations
 from pathlib import Path
 
 from openai import OpenAI
@@ -40,6 +41,8 @@ REGULATION_INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_hr_reg_docs_active ON hr_regulation_documents (is_active, deleted_at)",
     "CREATE INDEX IF NOT EXISTS idx_hr_reg_docs_created_at ON hr_regulation_documents (created_at DESC)",
 ]
+
+CLAUSE_PATTERN = re.compile(r"^제\s*\d+\s*조(?:의\s*\d+)?(?:\s*\([^)]+\))?", re.MULTILINE)
 
 
 def _get_olefile_module():
@@ -633,6 +636,87 @@ def _load_regulation_documents() -> list[dict]:
         raise RuntimeError("먼저 인사 규정 문서(hwp, docx, pdf)를 업로드해 주세요.")
 
     return documents
+
+
+def _normalize_clause_body(text: str) -> str:
+    normalized = re.sub(r"\s+", "", text or "")
+    normalized = re.sub(r"[^\w가-힣]", "", normalized)
+    return normalized.lower()
+
+
+def _extract_regulation_clauses(text: str) -> list[dict]:
+    matches = list(CLAUSE_PATTERN.finditer(text or ""))
+    if not matches:
+        return []
+
+    clauses = []
+    for index, match in enumerate(matches):
+        start = match.start()
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        chunk = (text[start:end] or "").strip()
+        if not chunk:
+            continue
+
+        lines = [line.strip() for line in chunk.splitlines() if line.strip()]
+        if not lines:
+            continue
+
+        title = lines[0][:160]
+        body = "\n".join(lines[1:]).strip()
+        normalized_body = _normalize_clause_body(body)
+        if not normalized_body:
+            continue
+
+        clauses.append(
+            {
+                "title": title,
+                "body": body,
+                "normalized_body": normalized_body,
+            }
+        )
+
+    return clauses
+
+
+def get_regulation_conflicts() -> dict:
+    documents = _load_regulation_documents()
+    if len(documents) < 2:
+        return {"has_conflict": False, "items": []}
+
+    conflict_items = []
+
+    for left_doc, right_doc in combinations(documents, 2):
+        left_clauses = {
+            clause["title"]: clause for clause in _extract_regulation_clauses(left_doc["text_content"])
+        }
+        right_clauses = {
+            clause["title"]: clause for clause in _extract_regulation_clauses(right_doc["text_content"])
+        }
+
+        shared_titles = sorted(set(left_clauses) & set(right_clauses))
+        conflicting_titles = [
+            title
+            for title in shared_titles
+            if left_clauses[title]["normalized_body"] != right_clauses[title]["normalized_body"]
+        ]
+
+        if conflicting_titles:
+            conflict_items.append(
+                {
+                    "file_names": [left_doc["file_name"], right_doc["file_name"]],
+                    "clause_titles": conflicting_titles[:5],
+                    "clause_count": len(conflicting_titles),
+                    "created_at": max(
+                        str(left_doc.get("uploaded_at") or ""),
+                        str(right_doc.get("uploaded_at") or ""),
+                    ),
+                }
+            )
+
+    return {
+        "has_conflict": bool(conflict_items),
+        "items": conflict_items,
+    }
 
 
 def _chunk_text(text: str, chunk_size: int = 1200) -> list[str]:
