@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import Breadcrumb from '../../../components/layout/Breadcrumb';
 import { CATEGORIES } from '../../../data/departments';
 import { getEmployees, updateEmployeeDepartment } from '../../../api/auth';
@@ -192,7 +193,11 @@ export default function HumanResources() {
                         {item.count}명
                       </span>
                       <span className="text-sm text-gray-400 dark:text-gray-500">
-                        {expandedDepartment === item.department ? '▲' : '▼'}
+                        {expandedDepartment === item.department ? (
+                          <FaChevronUp />
+                        ) : (
+                          <FaChevronDown />
+                        )}
                       </span>
                     </div>
                   </button>
