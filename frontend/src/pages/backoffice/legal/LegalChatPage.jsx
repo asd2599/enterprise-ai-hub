@@ -1,17 +1,23 @@
-// 법무 챗봇 페이지 — 사규·법률 문서 기반 Q&A 챗봇 (RAG)
-import { useState, useRef, useEffect } from 'react'
+// 법무 챗봇 페이지 — 법률 문서 기반 RAG Q&A
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { FaChevronDown, FaChevronUp } from 'react-icons/fa'
 import Breadcrumb from '../../../components/layout/Breadcrumb'
+import { getAuthSession } from '../../../api/auth'
+import {
+  askLegalQuestion,
+  deleteLegalDocument,
+  getLegalDocuments,
+  uploadLegalDocument,
+} from '../../../api/legal'
 
-// 플레이스홀더 추천 질문
+// 법무 전용 추천 질문
 const SUGGESTIONS = [
-  '연차휴가는 몇 일이나 사용할 수 있나요?',
-  '퇴직금 지급 기준이 어떻게 되나요?',
-  '외부 겸업이 허용되는지 확인해 주세요.',
-  '접대비 사용 한도가 얼마인가요?',
-  '개인정보 처리 방침에서 제3자 제공 기준은?',
+  '이 계약서에 자동 연장 조항이 있나요?',
+  '손해배상 한도는 어떻게 설정되어 있나요?',
+  '계약 해지 조건이 무엇인가요?',
 ]
 
-// 로딩 스피너 (점 3개)
+// 타이핑 인디케이터 (점 3개)
 function TypingDots() {
   return (
     <span className="inline-flex items-center gap-1">
@@ -26,116 +32,164 @@ function TypingDots() {
   )
 }
 
-// 메시지 버블
-function MessageBubble({ msg }) {
-  const isUser = msg.role === 'user'
-  return (
-    <div className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}>
-      {!isUser && (
-        <div className="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center shrink-0 mt-0.5">
-          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-        </div>
-      )}
-      <div
-        className={[
-          'max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed',
-          isUser
-            ? 'bg-violet-600 text-white rounded-tr-sm'
-            : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100 rounded-tl-sm',
-        ].join(' ')}
-      >
-        {msg.typing ? <TypingDots /> : (
-          <>
-            <p className="whitespace-pre-wrap">{msg.content}</p>
-            {msg.sources && msg.sources.length > 0 && (
-              <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-                <p className="text-xs text-gray-400 mb-1">참조 문서</p>
-                <div className="flex flex-wrap gap-1">
-                  {msg.sources.map((s, i) => (
-                    <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 font-medium">
-                      {s}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-      {isUser && (
-        <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold text-gray-600 dark:text-gray-300">
-          나
-        </div>
-      )}
-    </div>
-  )
-}
-
 export default function LegalChatPage() {
-  const [messages,  setMessages]  = useState([
-    {
-      id:      0,
-      role:    'assistant',
-      content: '안녕하세요! 법무 챗봇입니다.\n사규, 취업규칙, 계약 관련 법률 등 궁금한 내용을 질문해 주세요. 관련 문서를 검색하여 답변드립니다.',
-      sources: [],
-    },
-  ])
-  const [input,    setInput]    = useState('')
-  const [loading,  setLoading]  = useState(false)
-  const [error,    setError]    = useState(null)
-  const bottomRef  = useRef(null)
-  const inputRef   = useRef(null)
+  // ── 문서 상태 ──────────────────────────────────────────────
+  const [documents, setDocuments] = useState([])
+  const [documentsLoading, setDocumentsLoading] = useState(true)
+  const [documentsError, setDocumentsError] = useState('')
+  const [documentsExpanded, setDocumentsExpanded] = useState(false)
+  const [documentSort, setDocumentSort] = useState('latest')
 
-  // 새 메시지 추가 시 스크롤 이동
+  // ── 업로드 상태 ────────────────────────────────────────────
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
+  const fileInputRef = useRef(null)
+
+  // ── 채팅 상태 ──────────────────────────────────────────────
+  const [messages, setMessages] = useState([])
+  const [question, setQuestion] = useState('')
+  const [chatLoading, setChatLoading] = useState(false)
+  const [chatError, setChatError] = useState('')
+  const bottomRef = useRef(null)
+
+  // ── 세션 ───────────────────────────────────────────────────
+  const [session, setSession] = useState(() => getAuthSession())
+
+  useEffect(() => {
+    function syncSession() { setSession(getAuthSession()) }
+    window.addEventListener('auth-session-changed', syncSession)
+    return () => window.removeEventListener('auth-session-changed', syncSession)
+  }, [])
+
+  // ── 문서 목록 로드 ─────────────────────────────────────────
+  useEffect(() => {
+    fetchDocuments()
+  }, [])
+
+  async function fetchDocuments() {
+    setDocumentsLoading(true)
+    setDocumentsError('')
+    try {
+      const data = await getLegalDocuments()
+      setDocuments(data.items || [])
+    } catch (err) {
+      setDocumentsError(err.message || '문서 목록을 불러오지 못했습니다.')
+    } finally {
+      setDocumentsLoading(false)
+    }
+  }
+
+  // ── 스크롤 하단 고정 ────────────────────────────────────────
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // ── 메시지 전송 ───────────────────────────────────────────────
-  const handleSend = async (text = input.trim()) => {
-    if (!text || loading) return
-    setInput('')
-    setError(null)
+  const isReady = documents.length > 0
+  const isLoggedIn = Boolean(session?.employee?.employee_id)
 
-    const userMsg = { id: Date.now(), role: 'user', content: text }
-    const typingMsg = { id: Date.now() + 1, role: 'assistant', typing: true, content: '' }
+  // ── 문서 정렬 ──────────────────────────────────────────────
+  const sortedDocuments = useMemo(() => {
+    const next = [...documents]
+    if (documentSort === 'name') {
+      return next.sort((a, b) =>
+        String(a.file_name || '').localeCompare(String(b.file_name || ''), 'ko'),
+      )
+    }
+    if (documentSort === 'name-desc') {
+      return next.sort((a, b) =>
+        String(b.file_name || '').localeCompare(String(a.file_name || ''), 'ko'),
+      )
+    }
+    return next.sort((a, b) =>
+      String(b.uploaded_at || '').localeCompare(String(a.uploaded_at || '')),
+    )
+  }, [documentSort, documents])
 
-    setMessages(prev => [...prev, userMsg, typingMsg])
-    setLoading(true)
+  const helperText = useMemo(() => {
+    if (documentsLoading) return '문서 목록을 확인하는 중입니다.'
+    if (!isLoggedIn) return '로그인한 사용자만 챗봇을 이용할 수 있습니다.'
+    if (!isReady) return '법률 문서(hwp, docx, pdf)를 업로드해 주세요.'
+    return `${documents.length}개 문서를 기준으로 답변합니다.`
+  }, [documents.length, documentsLoading, isLoggedIn, isReady])
+
+  // ── 파일 업로드 ────────────────────────────────────────────
+  async function handleUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+
+    setUploading(true)
+    setUploadError('')
+
+    const formData = new FormData()
+    formData.append('file', file)
+    if (session?.employee?.employee_id) {
+      formData.append('employee_id', session.employee.employee_id)
+    }
+    if (session?.employee?.name) {
+      formData.append('uploader_name', session.employee.name)
+    }
+    if (session?.employee?.department) {
+      formData.append('uploader_department', session.employee.department)
+    }
 
     try {
-      // TODO: API 연동 — POST /api/legal/chat
-      // const data = await legalChat({ question: text, history: messages })
-      // setMessages(prev => prev.filter(m => !m.typing).concat({ ...data, id: Date.now() + 2, role: 'assistant' }))
-
-      // 플레이스홀더 목 응답
-      await new Promise(r => setTimeout(r, 1200))
-      const mockReply = getMockReply(text)
-      setMessages(prev => [
-        ...prev.filter(m => !m.typing),
-        { id: Date.now() + 2, role: 'assistant', content: mockReply.content, sources: mockReply.sources },
-      ])
-    } catch (e) {
-      setError(e.message || '응답 생성 중 오류가 발생했습니다.')
-      setMessages(prev => prev.filter(m => !m.typing))
+      await uploadLegalDocument(formData)
+      await fetchDocuments()
+    } catch (err) {
+      setUploadError(err.message || '문서 업로드에 실패했습니다.')
     } finally {
-      setLoading(false)
-      inputRef.current?.focus()
+      setUploading(false)
     }
   }
 
-  const handleKeyDown = (e) => {
+  // ── 문서 삭제 ──────────────────────────────────────────────
+  async function handleDelete(documentId) {
+    try {
+      await deleteLegalDocument(documentId)
+      await fetchDocuments()
+    } catch (err) {
+      setDocumentsError(err.message || '문서 삭제에 실패했습니다.')
+    }
+  }
+
+  // ── 채팅 전송 ──────────────────────────────────────────────
+  async function handleAsk(text = question.trim()) {
+    if (!text || chatLoading || !isReady || !isLoggedIn) return
+
+    setChatLoading(true)
+    setChatError('')
+    setMessages(prev => [...prev, { role: 'user', content: text }, { role: 'assistant', typing: true }])
+    setQuestion('')
+
+    try {
+      const res = await askLegalQuestion(text)
+      setMessages(prev => [
+        ...prev.filter(m => !m.typing),
+        {
+          role: 'assistant',
+          content: res.answer,
+          evidence: res.evidence || [],
+          sources: res.sources || [],
+        },
+      ])
+    } catch (err) {
+      setChatError(err.message || '답변 생성에 실패했습니다.')
+      setMessages(prev => prev.filter(m => !m.typing))
+    } finally {
+      setChatLoading(false)
+    }
+  }
+
+  function handleKeyDown(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      handleSend()
+      handleAsk()
     }
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] min-h-[500px]">
+    <div>
       <Breadcrumb
         crumbs={[
           { label: '경영지원 및 관리', to: '/backoffice' },
@@ -144,124 +198,251 @@ export default function LegalChatPage() {
         ]}
       />
 
-      {/* 헤더 */}
-      <div className="mt-4 mb-4 rounded-xl border p-4 bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-violet-600 text-white text-xs font-bold shrink-0">
-            RAG
-          </div>
-          <div>
-            <h1 className="text-base font-bold text-gray-900 dark:text-white leading-tight">
-              법무 챗봇
-            </h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              사규·취업규칙·법률 문서 기반 Q&A · RAG (Retrieval-Augmented Generation)
-            </p>
-          </div>
-          <span className="ml-auto text-xs px-2.5 py-1 rounded-full bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300 font-medium shrink-0">
-            법무/컴플라이언스팀 전용
+      <div className="mt-4 space-y-6">
+        {/* 헤더 */}
+        <div className="rounded-xl border border-violet-200 bg-violet-50 p-6 dark:border-violet-800 dark:bg-violet-950/30">
+          <span className="text-xs font-semibold uppercase tracking-wider text-violet-600 dark:text-violet-400">
+            Legal RAG Chat
           </span>
+          <h1 className="mt-1 text-xl font-bold text-gray-900 dark:text-white">
+            법무 챗봇
+          </h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+            계약서, 사규, 법률 문서(pdf, docx, hwp)를 업로드하면 AI가 문서 내용을 기반으로 법률 질문에 답변합니다.
+          </p>
         </div>
-      </div>
 
-      {/* 에러 */}
-      {error && (
-        <div className="mb-3 rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/20 px-4 py-2.5">
-          <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-        </div>
-      )}
+        {/* 문서 목록 카드 */}
+        <div className="rounded-xl border border-violet-200 bg-white p-6 dark:border-violet-800 dark:bg-gray-900">
+          <button
+            type="button"
+            onClick={() => setDocumentsExpanded(prev => !prev)}
+            className="flex w-full items-center justify-between gap-3 text-left"
+          >
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+              현재 적용 문서 목록
+            </h2>
+            <span className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
+              <span>
+                {documentsLoading ? '문서 목록 확인 중' : `${documents.length}개 문서`}
+              </span>
+              {documentsExpanded ? <FaChevronUp /> : <FaChevronDown />}
+            </span>
+          </button>
 
-      {/* 채팅 영역 */}
-      <div className="flex-1 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 p-4 space-y-4 mb-3">
-        {messages.map(msg => (
-          <MessageBubble key={msg.id} msg={msg} />
-        ))}
-        <div ref={bottomRef} />
-      </div>
+          {documentsExpanded && (
+            <div className="mt-4">
+              {/* 업로드 버튼 */}
+              <div className="mb-4 flex items-center gap-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.docx,.hwp"
+                  className="hidden"
+                  onChange={handleUpload}
+                  disabled={uploading}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading || !isLoggedIn}
+                  className="min-h-[44px] rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white
+                    hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-gray-300 transition-colors"
+                >
+                  {uploading ? '업로드 중…' : '문서 업로드'}
+                </button>
+                <span className="text-xs text-gray-400">pdf, docx, hwp 지원</span>
+              </div>
 
-      {/* 추천 질문 (첫 화면에서만) */}
-      {messages.length === 1 && (
-        <div className="flex flex-wrap gap-2 mb-3">
-          {SUGGESTIONS.map(s => (
-            <button
-              key={s}
-              onClick={() => handleSend(s)}
-              disabled={loading}
-              className="text-xs px-3 py-1.5 rounded-full border border-violet-200 dark:border-violet-800
-                text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-900/30
-                transition-colors min-h-[32px] disabled:opacity-50"
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      )}
+              {/* 업로드 에러 */}
+              {uploadError && (
+                <div className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">
+                  {uploadError}
+                </div>
+              )}
 
-      {/* 입력창 */}
-      <div className="flex items-end gap-2">
-        <textarea
-          ref={inputRef}
-          rows={1}
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="사규, 법률, 계약 관련 질문을 입력하세요... (Enter 전송 / Shift+Enter 줄바꿈)"
-          className="flex-1 resize-none text-sm rounded-xl border border-gray-200 dark:border-gray-600
-            bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200
-            px-4 py-3 focus:outline-none focus:ring-1 focus:ring-violet-400
-            min-h-[44px] max-h-[120px] overflow-y-auto"
-          style={{ height: 'auto' }}
-          onInput={e => {
-            e.target.style.height = 'auto'
-            e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
-          }}
-          disabled={loading}
-        />
-        <button
-          onClick={() => handleSend()}
-          disabled={!input.trim() || loading}
-          className="flex items-center justify-center w-11 h-11 rounded-xl bg-violet-600 text-white
-            hover:bg-violet-700 disabled:opacity-50 shrink-0"
-        >
-          {loading ? (
-            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-            </svg>
-          ) : (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-            </svg>
+              {/* 정렬 */}
+              {!documentsLoading && documents.length > 0 && (
+                <div className="mb-3 flex items-center justify-end gap-2">
+                  <label className="text-xs text-gray-500 dark:text-gray-400">정렬</label>
+                  <select
+                    value={documentSort}
+                    onChange={e => setDocumentSort(e.target.value)}
+                    className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 outline-none
+                      focus:border-violet-500 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200"
+                  >
+                    <option value="latest">최신순</option>
+                    <option value="name">ㄱ - ㅎ</option>
+                    <option value="name-desc">ㅎ - ㄱ</option>
+                  </select>
+                </div>
+              )}
+
+              {/* 로딩 / 빈 상태 / 목록 */}
+              {documentsLoading ? (
+                <div className="rounded-xl bg-gray-50 px-4 py-10 text-center text-sm text-gray-500 dark:bg-gray-800/70 dark:text-gray-400">
+                  문서 목록을 불러오는 중입니다.
+                </div>
+              ) : documents.length === 0 ? (
+                <div className="rounded-xl bg-gray-50 px-4 py-10 text-center text-sm text-gray-500 dark:bg-gray-800/70 dark:text-gray-400">
+                  현재 적용 중인 문서가 없습니다.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {sortedDocuments.map(doc => (
+                    <div
+                      key={doc.document_id}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-gray-50 px-4 py-3 dark:bg-gray-800/70"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
+                          {doc.file_name}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          추가 날짜: {doc.uploaded_at || '-'}
+                          {doc.chunk_count > 0 && ` · ${doc.chunk_count}개 청크 인덱싱됨`}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(doc.document_id)}
+                        className="min-h-[36px] rounded-lg border border-rose-200 px-3 py-1.5 text-xs text-rose-600
+                          hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950/30 transition-colors"
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
-        </button>
+        </div>
+
+        {/* 문서 에러 */}
+        {documentsError && (
+          <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">
+            {documentsError}
+          </div>
+        )}
+
+        {/* 채팅 카드 */}
+        <div className="rounded-xl border border-violet-200 bg-white p-6 dark:border-violet-800 dark:bg-gray-900">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                법무 Q&A 챗봇
+              </h2>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {helperText}
+              </p>
+            </div>
+          </div>
+
+          {/* 추천 질문 (메시지 없을 때) */}
+          {messages.length === 0 && isReady && isLoggedIn && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {SUGGESTIONS.map(s => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => handleAsk(s)}
+                  disabled={chatLoading}
+                  className="text-xs px-3 py-1.5 rounded-full border border-violet-200 dark:border-violet-800
+                    text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-900/30
+                    transition-colors min-h-[36px] disabled:opacity-50"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* 메시지 영역 */}
+          <div className="mt-5 min-h-[280px] rounded-xl bg-gray-50 p-4 dark:bg-gray-800/70 overflow-y-auto max-h-[420px]">
+            {messages.length === 0 ? (
+              <div className="flex min-h-[248px] items-center justify-center text-center text-sm text-gray-500 dark:text-gray-400">
+                {!isLoggedIn
+                  ? '로그인 후 챗봇을 사용할 수 있습니다.'
+                  : isReady
+                    ? '법률·계약 관련 질문을 입력해 주세요.'
+                    : '업로드된 문서가 없습니다.'}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {messages.map((msg, index) => (
+                  <div
+                    key={`${msg.role}-${index}`}
+                    className={`w-fit rounded-xl px-4 py-3 text-sm ${
+                      msg.role === 'user'
+                        ? 'self-end max-w-[70%] bg-violet-600 text-white'
+                        : 'max-w-[70%] bg-white text-gray-800 dark:bg-gray-950 dark:text-gray-100'
+                    }`}
+                  >
+                    {msg.typing ? (
+                      <TypingDots />
+                    ) : (
+                      <>
+                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                        {msg.role === 'assistant' && (msg.evidence?.length > 0 || msg.sources?.length > 0) && (
+                          <div className="mt-3 border-t border-gray-200 pt-3 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-400 space-y-1">
+                            {msg.sources?.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {msg.sources.map((s, si) => (
+                                  <span key={si} className="px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 font-medium">
+                                    {s}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {msg.evidence?.map((item, evIdx) => (
+                              <p key={`${index}-${evIdx}`} className="mt-1 first:mt-0">
+                                근거: {item}
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ))}
+                <div ref={bottomRef} />
+              </div>
+            )}
+          </div>
+
+          {/* 채팅 에러 */}
+          {chatError && (
+            <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">
+              {chatError}
+            </div>
+          )}
+
+          {/* 입력창 */}
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <input
+              type="text"
+              value={question}
+              onChange={e => setQuestion(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="법률·계약 관련 궁금한 점을 입력하세요."
+              disabled={!isLoggedIn || !isReady || chatLoading}
+              className="h-[44px] flex-1 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none
+                transition focus:border-violet-500 disabled:cursor-not-allowed disabled:bg-gray-100
+                dark:border-gray-700 dark:bg-gray-950 dark:text-white dark:disabled:bg-gray-800"
+            />
+            <button
+              type="button"
+              onClick={() => handleAsk()}
+              disabled={!isLoggedIn || !isReady || chatLoading || !question.trim()}
+              className="min-h-[44px] rounded-lg bg-violet-600 px-5 py-2 text-sm font-medium text-white
+                transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+            >
+              질문하기
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )
-}
-
-// 플레이스홀더 목 응답 생성
-function getMockReply(question) {
-  const q = question.toLowerCase()
-  if (q.includes('연차') || q.includes('휴가')) {
-    return {
-      content: '취업규칙 제24조에 따르면, 1년 이상 근무한 직원은 연간 15일의 연차휴가가 부여됩니다.\n\n• 1년 미만: 매월 1일 (최대 11일)\n• 1년 이상 3년 미만: 15일\n• 3년 이상: 2년마다 1일 추가 (최대 25일)\n\n연차는 근로기준법 제60조에 따라 보장되며, 미사용 연차는 수당으로 보전됩니다.',
-      sources: ['취업규칙 제24조', '근로기준법 제60조'],
-    }
-  }
-  if (q.includes('퇴직금')) {
-    return {
-      content: '퇴직금 지급 기준은 근로자퇴직급여보장법에 의거합니다.\n\n• 지급 요건: 1년 이상 계속 근무\n• 산정 기준: 계속근무연수 1년에 대해 30일분 평균임금\n• 지급 시기: 퇴직일로부터 14일 이내\n\n자세한 사항은 인사팀 또는 취업규칙 제45조를 참조하세요.',
-      sources: ['취업규칙 제45조', '근로자퇴직급여보장법 제9조'],
-    }
-  }
-  if (q.includes('접대비') || q.includes('한도')) {
-    return {
-      content: '사규 경비처리 기준 제8조에 따른 접대비 지출 한도는 다음과 같습니다.\n\n• 1회 한도: 50만원 (부가세 포함)\n• 월 한도: 100만원\n• 연 한도: 500만원\n\n한도 초과 시 팀장 및 경영지원팀 사전 승인이 필요하며, 영수증 및 지출결의서 제출이 의무입니다.',
-      sources: ['경비처리 기준 제8조', '내부감사 규정 §3-2'],
-    }
-  }
-  return {
-    content: `"${question}"에 대한 답변입니다.\n\n현재 플레이스홀더 모드로 동작 중입니다. 실제 서비스에서는 사규·법률 문서 데이터베이스를 RAG로 검색하여 정확한 답변을 제공합니다.\n\n법무팀에 직접 문의하거나, 사내 포털의 사규 검색 시스템을 이용해 주세요.`,
-    sources: ['플레이스홀더'],
-  }
 }

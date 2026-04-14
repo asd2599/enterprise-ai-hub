@@ -1,6 +1,7 @@
-// 계약 생성 페이지 — 조건 입력 → 표준 계약서 초안 자동 작성
+// 계약 생성 페이지 — 조건 입력 → 표준 계약서 초안 자동 작성 (RAG 활용)
 import { useState } from 'react'
 import Breadcrumb from '../../../components/layout/Breadcrumb'
+import { generateContractDraft, downloadDraftDocx } from '../../../api/legal'
 
 // 계약 유형 목록
 const CONTRACT_TYPES = [
@@ -47,10 +48,14 @@ export default function ContractDraftPage() {
     end_date:      '',
     extra:         '',   // 특이 사항
   })
-  const [loading,  setLoading]  = useState(false)
-  const [error,    setError]    = useState(null)
-  const [draft,    setDraft]    = useState('')
-  const [copied,   setCopied]   = useState(false)
+  const [loading,      setLoading]      = useState(false)
+  const [error,        setError]        = useState(null)
+  const [draft,        setDraft]        = useState('')
+  const [note,         setNote]         = useState('')
+  const [ragSources,   setRagSources]   = useState([])
+  const [copied,       setCopied]       = useState(false)
+  const [downloading,  setDownloading]  = useState(false)
+  const [downloadError, setDownloadError] = useState('')
 
   const update = (field, value) => setForm(prev => ({ ...prev, [field]: value }))
 
@@ -62,52 +67,13 @@ export default function ContractDraftPage() {
     setLoading(true)
     setError(null)
     setDraft('')
+    setNote('')
+    setRagSources([])
     try {
-      // TODO: API 연동 — POST /api/legal/draft
-      // const data = await generateContract(form)
-      // setDraft(data.draft)
-
-      // 플레이스홀더 목 데이터
-      await new Promise(r => setTimeout(r, 1800))
-      const typeName = CONTRACT_TYPES.find(t => t.value === form.contract_type)?.label || '계약서'
-      setDraft(`${typeName}
-
-갑: ${form.party_a}
-을: ${form.party_b}
-
-제 1조 (목적)
-본 계약은 ${form.purpose}에 관하여 갑과 을 사이의 권리·의무 관계를 명확히 하는 것을 목적으로 한다.
-
-제 2조 (계약 기간)
-본 계약의 유효 기간은 ${form.start_date || 'YYYY-MM-DD'}부터 ${form.end_date || 'YYYY-MM-DD'}까지로 한다. 단, 계약 기간 만료 30일 전까지 일방 당사자로부터 서면 해지 통보가 없는 경우 동일한 조건으로 1년씩 자동 연장된다.
-
-제 3조 (계약 금액 및 지급)
-${form.amount ? `① 본 계약의 총 계약 금액은 금 ${Number(form.amount.replace(/,/g, '')).toLocaleString()}원(부가세 별도)으로 한다.` : '① 계약 금액은 별도 협의하여 결정한다.'}
-② 을은 계약 이행 완료 후 세금계산서를 발행하며, 갑은 발행일로부터 30일 이내에 지급한다.
-
-제 4조 (비밀유지)
-양 당사자는 본 계약의 이행 과정에서 취득한 상대방의 영업 비밀 및 기술 정보를 본 계약 종료 후 3년간 제3자에게 공개하지 아니한다.
-
-제 5조 (손해배상)
-① 일방 당사자의 귀책사유로 상대방에게 손해가 발생한 경우 그 손해를 배상하여야 한다.
-② 손해배상의 범위는 직접 손해에 한하며, 간접 손해·파생 손해·영업 손실은 포함하지 아니한다.
-③ 배상 한도는 본 계약의 총 계약 금액을 초과하지 아니한다.
-
-제 6조 (계약 해지)
-① 갑 또는 을이 본 계약을 해지하고자 할 경우 최소 30일 전에 상대방에게 서면으로 통보하여야 한다.
-② 다음 각 호의 경우 상대방은 즉시 본 계약을 해지할 수 있다.
-   1. 파산 또는 회생 신청
-   2. 중대한 계약 위반 및 시정 요청 후 14일 이내 미시정
-
-제 7조 (준거법 및 관할)
-본 계약은 대한민국 법률에 따라 해석되며, 분쟁 발생 시 서울중앙지방법원을 전속 관할 법원으로 한다.
-
-${form.extra ? `[특이 사항]\n${form.extra}\n\n` : ''}위 계약의 성립을 증명하기 위하여 본 계약서 2부를 작성하고, 갑과 을이 각 서명·날인 후 각 1부씩 보관한다.
-
-작성일: ${new Date().toLocaleDateString('ko-KR')}
-
-갑: ${form.party_a}  (인)
-을: ${form.party_b}  (인)`)
+      const data = await generateContractDraft(form)
+      setDraft(data.draft || '')
+      setNote(data.note || '')
+      setRagSources(data.rag_sources || [])
     } catch (e) {
       setError(e.message || '계약서 생성 중 오류가 발생했습니다.')
     } finally {
@@ -121,6 +87,21 @@ ${form.extra ? `[특이 사항]\n${form.extra}\n\n` : ''}위 계약의 성립을
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })
+  }
+
+  // 워드 파일 다운로드
+  const handleDownloadDocx = async () => {
+    if (!draft || downloading) return
+    setDownloading(true)
+    setDownloadError('')
+    const typeName = CONTRACT_TYPES.find(t => t.value === form.contract_type)?.label || '계약서'
+    try {
+      await downloadDraftDocx(draft, typeName)
+    } catch (e) {
+      setDownloadError(e.message || 'DOCX 다운로드에 실패했습니다.')
+    } finally {
+      setDownloading(false)
+    }
   }
 
   return (
@@ -274,18 +255,47 @@ ${form.extra ? `[특이 사항]\n${form.extra}\n\n` : ''}위 계약의 성립을
 
         {/* ── 결과 영역 ──────────────────────────────────────── */}
         <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5 flex flex-col">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
             <h2 className="text-sm font-semibold text-gray-900 dark:text-white">생성된 계약서 초안</h2>
             {draft && (
-              <button
-                onClick={handleCopy}
-                className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600
-                  text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 min-h-[32px]"
-              >
-                {copied ? '✓ 복사됨' : '복사'}
-              </button>
+              <div className="flex items-center gap-2">
+                {/* 워드 다운로드 */}
+                <button
+                  onClick={handleDownloadDocx}
+                  disabled={downloading}
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg
+                    bg-blue-600 text-white hover:bg-blue-700
+                    disabled:opacity-50 min-h-[32px] transition-colors"
+                >
+                  {downloading ? (
+                    <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                    </svg>
+                  ) : (
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                  )}
+                  {downloading ? '생성 중…' : '워드 다운로드'}
+                </button>
+                {/* 클립보드 복사 */}
+                <button
+                  onClick={handleCopy}
+                  className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600
+                    text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 min-h-[32px]"
+                >
+                  {copied ? '✓ 복사됨' : '복사'}
+                </button>
+              </div>
             )}
           </div>
+          {downloadError && (
+            <div className="mb-3 rounded-lg border border-red-200 bg-red-50 dark:bg-red-900/20 px-4 py-2 text-xs text-red-700 dark:text-red-400">
+              {downloadError}
+            </div>
+          )}
 
           {/* 로딩 */}
           {loading && (
@@ -315,8 +325,23 @@ ${form.extra ? `[특이 사항]\n${form.extra}\n\n` : ''}위 계약의 성립을
                   {draft}
                 </pre>
               </div>
+
+              {/* RAG 참조 문서 */}
+              {ragSources.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                  <p className="text-xs text-gray-400 mb-1.5">사내 법령·사규 참조</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ragSources.map(s => (
+                      <span key={s} className="text-xs px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 font-medium">
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
-                ※ AI가 생성한 초안입니다. 반드시 법무 담당자의 최종 검토를 거친 후 사용하세요.
+                {note ? `※ ${note}` : '※ AI가 생성한 초안입니다. 반드시 법무 담당자의 최종 검토를 거친 후 사용하세요.'}
               </p>
             </>
           )}

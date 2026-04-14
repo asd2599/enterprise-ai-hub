@@ -1,6 +1,7 @@
-// 계약 검토 페이지 — 계약서 PDF/텍스트 업로드 → AI 리스크 조항 탐지 및 요약
+// 계약 검토 페이지 — 계약서 업로드 → AI 리스크 조항 탐지 및 요약 (RAG 활용)
 import { useState, useRef, useCallback } from 'react'
 import Breadcrumb from '../../../components/layout/Breadcrumb'
+import { reviewContract } from '../../../api/legal'
 
 // ── 위험도 설정 ───────────────────────────────────────────────
 const RISK = {
@@ -30,8 +31,18 @@ const RISK = {
   },
 }
 
-const ALLOWED_TYPES = ['application/pdf', 'text/plain']
-const ALLOWED_EXT   = ['.pdf', '.txt']
+const ALLOWED_TYPES = [
+  'application/pdf',
+  'text/plain',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+]
+const ALLOWED_EXT = ['.pdf', '.txt', '.docx', '.hwp', '.jpg', '.jpeg', '.png', '.webp', '.gif']
+
+const IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
 
 // 로딩 스피너
 function Spinner({ size = 4 }) {
@@ -105,6 +116,7 @@ function ClauseCard({ clause, expanded, onToggle }) {
 
 export default function ContractReviewPage() {
   const [file,       setFile]       = useState(null)
+  const [preview,    setPreview]    = useState(null)   // 이미지 미리보기 URL
   const [dragging,   setDragging]   = useState(false)
   const [loading,    setLoading]    = useState(false)
   const [error,      setError]      = useState(null)
@@ -112,16 +124,26 @@ export default function ContractReviewPage() {
   const [expandedId, setExpandedId] = useState(null)
   const inputRef = useRef(null)
 
+  const isImage = file && IMAGE_EXTS.some(ext => file.name.toLowerCase().endsWith(ext))
+
   // ── 파일 선택/드롭 처리 ──────────────────────────────────────
   const handleFile = useCallback((f) => {
     if (!f) return
-    if (!ALLOWED_TYPES.includes(f.type) && !ALLOWED_EXT.some(ext => f.name.endsWith(ext))) {
-      setError('PDF 또는 텍스트(.txt) 파일만 업로드 가능합니다.')
+    if (!ALLOWED_TYPES.includes(f.type) && !ALLOWED_EXT.some(ext => f.name.toLowerCase().endsWith(ext))) {
+      setError('PDF, TXT, DOCX, HWP 또는 이미지(JPG, PNG, WEBP) 파일만 업로드 가능합니다.')
       return
     }
     setFile(f)
     setError(null)
     setResult(null)
+
+    // 이미지 미리보기 생성
+    if (IMAGE_EXTS.some(ext => f.name.toLowerCase().endsWith(ext))) {
+      const url = URL.createObjectURL(f)
+      setPreview(url)
+    } else {
+      setPreview(null)
+    }
   }, [])
 
   const handleDrop = useCallback((e) => {
@@ -140,47 +162,10 @@ export default function ContractReviewPage() {
     setError(null)
     setResult(null)
     try {
-      // TODO: API 연동 — POST /api/legal/review (FormData)
-      // const formData = new FormData()
-      // formData.append('file', file)
-      // const data = await reviewContract(formData)
-      // setResult(data)
-
-      // 플레이스홀더: 실제 API 연동 전 구조 확인용 목 데이터
-      await new Promise(r => setTimeout(r, 1500))
-      setResult({
-        overall_risk: 'warning',
-        summary: '계약서 전반적으로 2건의 Warning 조항이 발견되었습니다. 손해배상 한도 조항과 계약 해지 조항에서 을(乙) 측에 불리한 내용이 포함되어 있어 검토가 필요합니다.',
-        clauses: [
-          {
-            id: 1,
-            risk_level: 'danger',
-            title: '손해배상 한도 무제한',
-            article: '제 8조 제 2항',
-            original_text: '을은 본 계약과 관련하여 발생한 모든 손해에 대해 무한 책임을 진다.',
-            ai_comment: '손해배상 한도를 무제한으로 설정하는 조항은 을에게 과도한 위험을 부담시킵니다. 일반적인 계약 관행에서는 손해배상액을 계약 금액의 일정 배수로 제한합니다.',
-            suggestion: '"을의 손해배상 책임은 본 계약에서 수령한 총 계약 금액을 초과하지 아니한다."로 수정을 권장합니다.',
-          },
-          {
-            id: 2,
-            risk_level: 'warning',
-            title: '일방적 계약 해지권',
-            article: '제 12조 제 1항',
-            original_text: '갑은 사전 통보 없이 본 계약을 즉시 해지할 수 있다.',
-            ai_comment: '사전 통보 없는 일방적 해지권은 을에게 불리합니다. 최소 30일 이상의 사전 통지 의무를 규정하는 것이 일반적입니다.',
-            suggestion: '"갑이 계약을 해지하고자 할 경우 최소 30일 전에 서면으로 통보하여야 한다."로 수정을 권장합니다.',
-          },
-          {
-            id: 3,
-            risk_level: 'safe',
-            title: '비밀유지 조항',
-            article: '제 5조',
-            original_text: '양 당사자는 본 계약 기간 및 종료 후 3년간 상대방의 영업 비밀을 제3자에게 공개하지 않는다.',
-            ai_comment: '비밀유지 의무 기간(3년) 및 범위가 적절합니다. 양 당사자에게 균등하게 적용되는 표준적인 NDA 조항입니다.',
-            suggestion: null,
-          },
-        ],
-      })
+      const formData = new FormData()
+      formData.append('file', file)
+      const data = await reviewContract(formData)
+      setResult(data)
     } catch (e) {
       setError(e.message || 'AI 검토 중 오류가 발생했습니다.')
     } finally {
@@ -244,7 +229,7 @@ export default function ContractReviewPage() {
         <input
           ref={inputRef}
           type="file"
-          accept=".pdf,.txt"
+          accept=".pdf,.txt,.docx,.hwp,.jpg,.jpeg,.png,.webp,.gif"
           className="hidden"
           onChange={e => handleFile(e.target.files[0])}
         />
@@ -255,16 +240,31 @@ export default function ContractReviewPage() {
           </svg>
         </div>
         {file ? (
-          <div>
-            <p className="text-sm font-medium text-violet-700 dark:text-violet-300">{file.name}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{(file.size / 1024).toFixed(1)} KB · 클릭하여 파일 변경</p>
+          <div className="flex flex-col items-center gap-2">
+            {/* 이미지 미리보기 */}
+            {isImage && preview && (
+              <img
+                src={preview}
+                alt="계약서 미리보기"
+                className="max-h-48 max-w-full rounded-lg border border-gray-200 dark:border-gray-700 object-contain"
+              />
+            )}
+            <div className="flex items-center gap-2 flex-wrap justify-center">
+              <p className="text-sm font-medium text-violet-700 dark:text-violet-300">{file.name}</p>
+              {isImage && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400 font-medium">
+                  Vision AI
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-gray-400">{(file.size / 1024).toFixed(1)} KB · 클릭하여 파일 변경</p>
           </div>
         ) : (
           <div>
             <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
               계약서 파일을 드래그하거나 클릭하여 업로드
             </p>
-            <p className="text-xs text-gray-400 mt-1">PDF, TXT 지원 · 최대 10MB</p>
+            <p className="text-xs text-gray-400 mt-1">PDF · TXT · DOCX · HWP · JPG · PNG · WEBP · 최대 10MB</p>
           </div>
         )}
       </div>
@@ -326,6 +326,20 @@ export default function ContractReviewPage() {
               })}
               <span className="text-xs text-gray-400 ml-1">총 {result.clauses.length}개 조항 분석</span>
             </div>
+
+            {/* RAG 참조 문서 */}
+            {result.rag_sources?.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                <p className="text-xs text-gray-400 mb-1.5">사내 법령·사규 참조</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {result.rag_sources.map(s => (
+                    <span key={s} className="text-xs px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 font-medium">
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 조항별 분석 테이블 */}
