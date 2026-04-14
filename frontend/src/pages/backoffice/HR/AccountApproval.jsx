@@ -6,7 +6,7 @@ import {
   rejectEmployee,
 } from '../../../api/hr';
 import { CATEGORIES } from '../../../data/departments';
-import { IoRefresh } from 'react-icons/io5';
+import { IoMdRefresh } from 'react-icons/io';
 
 function ErrorBanner({ message }) {
   if (!message) return null;
@@ -193,9 +193,10 @@ export default function AccountApproval() {
             <button
               type="button"
               onClick={fetchPendingEmployees}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-blue-200 text-sm font-medium text-blue-700 transition hover:bg-blue-50"
+              aria-label="새로고침"
+              className="inline-flex items-center justify-center rounded-xl border border-blue-200 p-3 text-blue-700 transition hover:bg-blue-50"
             >
-              <IoRefresh />
+              <IoMdRefresh className="h-5 w-5 shrink-0" aria-hidden />
             </button>
           </div>
 

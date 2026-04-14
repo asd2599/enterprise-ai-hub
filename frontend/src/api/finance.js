@@ -114,3 +114,105 @@ export function getImageUrl(imagePath) {
   if (!imagePath) return null
   return `${BASE_URL}/${imagePath}`
 }
+
+/**
+ * 재무 대시보드 통계 조회 (재무팀 전용)
+ * @param {number} year         - 조회 연도
+ * @param {string} employeeId   - 로그인 사원번호 (권한 검증용)
+ * @returns {{ year, total_budget, this_month, last_month, mom_change, danger_count, dept_stats, monthly_stats }}
+ */
+export async function getFinanceStats(year, employeeId) {
+  const res = await fetch(`${BASE_URL}/api/finance/stats?year=${year}`, {
+    headers: { 'x-employee-id': employeeId },
+  })
+  return handleResponse(res)
+}
+
+/**
+ * CFO AI 리포트 생성 (gpt-4o-mini)
+ * @param {number} year         - 분석 연도
+ * @param {string} employeeId   - 로그인 사원번호 (권한 검증용)
+ * @returns {{ report: string, year: number }}
+ */
+export async function generateCfoReport(year, employeeId) {
+  const res = await fetch(`${BASE_URL}/api/finance/report`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-employee-id': employeeId,
+    },
+    body: JSON.stringify({ year }),
+  })
+  return handleResponse(res)
+}
+
+/**
+ * 테스트용 시드 데이터 삽입
+ * @returns {{ message, transactions, budgets }}
+ */
+export async function seedFinanceData() {
+  const res = await fetch(`${BASE_URL}/api/finance/seed`, { method: 'POST' })
+  return handleResponse(res)
+}
+
+// ── 내부감사 (FDS) ────────────────────────────────────────────
+
+/**
+ * 이상 지출 탐지 엔진 실행 (Rule-based + AI 분석)
+ * @param {string} employeeId
+ * @returns {{ message, analyzed, saved, logs }}
+ */
+export async function runAuditDetection(employeeId) {
+  const res = await fetch(`${BASE_URL}/api/finance/audit/run`, {
+    method: 'POST',
+    headers: { 'x-employee-id': employeeId },
+  })
+  return handleResponse(res)
+}
+
+/**
+ * 감사 로그 조회 (전표 정보 포함)
+ * @param {{ risk_level?, is_confirmed?, limit?, offset? }} params
+ * @param {string} employeeId
+ * @returns {{ total, items }}
+ */
+export async function getAuditLogs(params = {}, employeeId) {
+  const qs = new URLSearchParams(
+    Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== ''))
+  ).toString()
+  const res = await fetch(`${BASE_URL}/api/finance/audit/logs${qs ? '?' + qs : ''}`, {
+    headers: { 'x-employee-id': employeeId },
+  })
+  return handleResponse(res)
+}
+
+/**
+ * 감사 로그 확인 처리 (is_confirmed → true)
+ * @param {number} logId
+ * @param {string} confirmedBy  확인자 이름/사번
+ * @param {string} employeeId
+ */
+export async function confirmAuditLog(logId, confirmedBy, employeeId) {
+  const res = await fetch(`${BASE_URL}/api/finance/audit/logs/${logId}/confirm`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-employee-id': employeeId,
+    },
+    body: JSON.stringify({ confirmed_by: confirmedBy }),
+  })
+  return handleResponse(res)
+}
+
+/**
+ * 월간 감사 보고서 생성 (gpt-4o-mini)
+ * @param {string} employeeId
+ * @returns {{ report, danger_count, warning_count, total_items }}
+ */
+export async function generateAuditReport(employeeId) {
+  const res = await fetch(`${BASE_URL}/api/finance/audit/report`, {
+    method: 'POST',
+    headers: { 'x-employee-id': employeeId },
+  })
+  return handleResponse(res)
+}
