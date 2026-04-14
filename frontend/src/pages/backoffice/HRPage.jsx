@@ -4,6 +4,22 @@ import Breadcrumb from '../../components/layout/Breadcrumb';
 
 const HR_TOOLS = [
   {
+    id: 'employee-id-generator',
+    label: '사번 생성기',
+    description:
+      '입사 부서코드+년도, 일련+랜덤(2자리) 규칙으로 사번을 발급합니다. 발급된 사번으로만 회원가입할 수 있습니다.',
+    path: '/backoffice/hr/employee-id-generator',
+    badge: '사번 발급 · 가입 제한',
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+      />
+    ),
+  },
+  {
     id: 'account-approval',
     label: '계정 승인 관리',
     description:
@@ -238,7 +254,7 @@ export default function HRPage() {
           있습니다.
         </p>
         <span className="inline-block mt-3 text-xs px-2.5 py-1 rounded-full font-medium bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
-          인사 도구 8개
+          인사 도구 9개
         </span>
       </div>
 

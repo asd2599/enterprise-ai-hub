@@ -205,3 +205,36 @@ CATEGORIES.forEach(cat => {
     DEPT_MAP[dept.id] = { ...dept, categoryId: cat.id, categoryLabel: cat.label, color: cat.color }
   })
 })
+
+/** 사번 발급 입사 부서 코드 — DEPT_MAP id ↔ 코드 (메인 대시보드 부서 순서 유지) */
+export const DEPT_ID_TO_ISSUE_CODE = {
+  hr: 'BHR',
+  finance: 'BFI',
+  legal: 'BLG',
+  admin: 'BGA',
+  strategy: 'FST',
+  sales: 'FSL',
+  marketing: 'FMK',
+  cs: 'FCS',
+  dev: 'RDE',
+  qa: 'RQA',
+  design: 'RDS',
+}
+
+/** 메인 대시보드(CATEGORIES)와 동일한 부서 코드 정렬 순서 (마지막: 기타) */
+export const DASHBOARD_ISSUE_CODE_ORDER = [
+  ...CATEGORIES.flatMap((cat) =>
+    cat.departments.map((d) => DEPT_ID_TO_ISSUE_CODE[d.id]),
+  ),
+  'XYZ',
+]
+
+/** 입사 부서 코드 → 대시보드 부서 카드와 동일한 팀명 (각 부서 `label`) */
+export const ISSUE_CODE_TO_LABEL = {
+  ...Object.fromEntries(
+    CATEGORIES.flatMap((cat) =>
+      cat.departments.map((d) => [DEPT_ID_TO_ISSUE_CODE[d.id], d.label]),
+    ),
+  ),
+  XYZ: '기타',
+}

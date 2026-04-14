@@ -295,7 +295,7 @@ export default function Departments() {
                       colSpan={5}
                       className="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400"
                     >
-                      사원 데이터를 불러오는 중입니다...
+                      사원 데이터를 불러오는 중입니다 ...
                     </td>
                   </tr>
                 ) : null}
@@ -306,7 +306,7 @@ export default function Departments() {
                       colSpan={5}
                       className="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400"
                     >
-                      표시할 승인 완료 사원 데이터가 없습니다.
+                      표시할 데이터가 없습니다.
                     </td>
                   </tr>
                 ) : null}

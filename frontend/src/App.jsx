@@ -32,6 +32,8 @@ import UploadRegulation from './pages/backoffice/HR/UploadRegulation';
 import Pay from './pages/backoffice/HR/Pay';
 import HumanResources from './pages/backoffice/HR/HumanResources';
 import AccountApproval from './pages/backoffice/HR/AccountApproval';
+import EmployeeIdGenerator from './pages/backoffice/HR/EmployeeIdGenerator';
+import Departments from './pages/backoffice/HR/Departments';
 import Match from './pages/backoffice/HR/Match';
 import Evaluate from './pages/backoffice/HR/Evaluate';
 import AutoManual from './pages/backoffice/HR/AutoManual';
@@ -93,6 +95,11 @@ function App() {
             path="backoffice/hr/account-approval"
             element={<AccountApproval />}
           />
+          <Route
+            path="backoffice/hr/employee-id-generator"
+            element={<EmployeeIdGenerator />}
+          />
+          <Route path="backoffice/hr/departments" element={<Departments />} />
           <Route path="backoffice/hr/match" element={<Match />} />
           <Route path="backoffice/hr/evaluate" element={<Evaluate />} />
           <Route path="backoffice/hr/auto-manual" element={<AutoManual />} />
