@@ -22,7 +22,7 @@ function toProfileForm(employee) {
     employee_id: employee?.employee_id || '',
     name: employee?.name || '',
     email: employee?.email || '',
-    phone_number: employee?.phone_number || '',
+    phone_number: String(employee?.phone_number || '').replace(/\D/g, ''),
     birth_date: (employee?.birth_date || '').replaceAll('-', ''),
     nickname: employee?.nickname || '',
     password: '',
@@ -96,8 +96,12 @@ export default function Setting() {
 
   function handleProfileChange(event) {
     const { name, value } = event.target;
-    const nextValue =
-      name === 'birth_date' ? value.replace(/\D/g, '').slice(0, 8) : value;
+    let nextValue = value;
+    if (name === 'birth_date') {
+      nextValue = value.replace(/\D/g, '').slice(0, 8);
+    } else if (name === 'phone_number') {
+      nextValue = value.replace(/\D/g, '').slice(0, 15);
+    }
 
     setProfileForm((prev) => ({ ...prev, [name]: nextValue }));
   }
@@ -119,7 +123,7 @@ export default function Setting() {
         employee_id: profileForm.employee_id,
         name: profileForm.name.trim(),
         email: profileForm.email.trim(),
-        phone_number: profileForm.phone_number.trim(),
+        phone_number: profileForm.phone_number.replace(/\D/g, ''),
         birth_date: formatBirthDateForApi(profileForm.birth_date),
         nickname: profileForm.nickname.trim() || null,
         password: profileForm.password.trim() || null,
@@ -236,10 +240,17 @@ export default function Setting() {
                 </span>
                 <input
                   name="phone_number"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="tel"
                   value={profileForm.phone_number}
                   onChange={handleProfileChange}
+                  placeholder="01012345678"
                   className={INPUT_CLASSNAME}
                 />
+                <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                  숫자만 입력 (하이픈 없음)
+                </p>
               </label>
               <label className="block">
                 <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">

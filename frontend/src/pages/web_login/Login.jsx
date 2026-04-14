@@ -123,7 +123,7 @@ export default function Login() {
                 type="text"
                 value={form.employee_id}
                 onChange={handleChange}
-                placeholder="예: BHR26-00147"
+                placeholder="예: BHR26-00047"
                 className={FIELD_CLASSNAME}
               />
             </label>

@@ -54,8 +54,12 @@ export default function Register() {
 
   function handleChange(event) {
     const { name, value } = event.target;
-    const nextValue =
-      name === 'birth_date' ? value.replace(/\D/g, '').slice(0, 8) : value;
+    let nextValue = value;
+    if (name === 'birth_date') {
+      nextValue = value.replace(/\D/g, '').slice(0, 8);
+    } else if (name === 'phone_number') {
+      nextValue = value.replace(/\D/g, '').slice(0, 15);
+    }
 
     setForm((prev) => ({ ...prev, [name]: nextValue }));
   }
@@ -77,7 +81,7 @@ export default function Register() {
         name: form.name.trim(),
         email: form.email.trim(),
         password: form.password,
-        phone_number: form.phone_number.trim(),
+        phone_number: form.phone_number.replace(/\D/g, ''),
         birth_date: formatBirthDateForApi(form.birth_date),
         nickname: form.nickname.trim() || null,
       };
@@ -171,12 +175,11 @@ export default function Register() {
                   type="text"
                   value={form.employee_id}
                   onChange={handleChange}
-                  placeholder="예: BHR26-00147"
+                  placeholder="예: BHR26-00047"
                   className={FIELD_CLASSNAME}
                 />
                 <p className="mt-1.5 text-xs text-gray-500">
-                  인사팀에서 안내한 사번을 그대로 입력하세요. 신규 형식은
-                  부서코드+년도(2자리), 하이픈, 일련(3자리)+랜덤(2자리)입니다.
+                  안내받은 사번을 입력하세요.
                 </p>
               </label>
 
@@ -215,11 +218,16 @@ export default function Register() {
                 <input
                   name="phone_number"
                   type="text"
+                  inputMode="numeric"
+                  autoComplete="tel"
                   value={form.phone_number}
                   onChange={handleChange}
-                  placeholder="010-0000-0000"
+                  placeholder="01012345678"
                   className={FIELD_CLASSNAME}
                 />
+                <p className="mt-1.5 text-xs text-gray-500">
+                  하이픈(-) 없이 숫자만 입력하세요.
+                </p>
               </label>
 
               <label className="block">
@@ -300,8 +308,7 @@ export default function Register() {
             ) : null}
 
             <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
-              가입 후 바로 부서와 직급이 생성되지 않으며, 인사팀 승인 단계에서
-              최종 배정됩니다.
+              인사팀 승인 후 로그인 가능합니다.
             </div>
 
             <button

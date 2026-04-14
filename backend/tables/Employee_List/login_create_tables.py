@@ -33,7 +33,8 @@ TABLES: list[tuple[str, str]] = [
             is_verified   BOOLEAN         DEFAULT FALSE,        -- 사원 인증 여부
             is_active     BOOLEAN         DEFAULT FALSE,        -- 승인 전 비활성 상태
             created_at    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-            updated_at    TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+            updated_at    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+            verified_at   TIMESTAMPTZ                              -- 인사 승인(활성화) 시각
         )
         """,
     ),
