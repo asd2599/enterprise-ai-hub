@@ -34,30 +34,82 @@ export async function generateProposal(params) {
 
 /**
  * 팀원 목록 조회
+ * @param {string} [periodKey] — 특정 기간에 등록된 팀원만 반환
  * @returns {Array<{ id: string, name: string }>}
  */
-export async function getTeamMembers() {
-  const res = await fetch(`${BASE_URL}/api/sales/performance/members`)
+export async function getTeamMembers(periodKey = '') {
+  const qs = periodKey ? `?period_key=${encodeURIComponent(periodKey)}` : ''
+  const res = await fetch(`${BASE_URL}/api/sales/performance/members${qs}`)
+  return handleResponse(res)
+}
+
+/**
+ * 분석 가능 기간 목록 (DB에 등록된 period 최신순)
+ * @param {'' | 'month' | 'quarter' | 'year'} [periodType]
+ * @returns {Array<{ period_key, period_label, period_type, start_date, end_date }>}
+ */
+export async function listPerformancePeriods(periodType = '') {
+  const qs = periodType ? `?period_type=${encodeURIComponent(periodType)}` : ''
+  const res = await fetch(`${BASE_URL}/api/sales/performance/periods${qs}`)
   return handleResponse(res)
 }
 
 /**
  * 영업 실적 분석 리포트 생성
- * @param {{
- *   period: '이번 달'|'이번 분기'|'올해',
- *   member_id?: string
- * }} params
- * @returns {{
- *   metrics, pipeline, members,
- *   summary, achievement_comment, anomalies,
- *   pipeline_insight, top_performer, risk_deals, recommendations
- * }}
+ * @param {{ period_key: string, member_id?: string }} params
  */
 export async function analyzePerformance(params) {
   const res = await fetch(`${BASE_URL}/api/sales/performance/analyze`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
+  })
+  return handleResponse(res)
+}
+
+/**
+ * 영업 실적 등록 (같은 period_key면 덮어쓰기)
+ * @param {{
+ *   period_type: 'month'|'quarter'|'year',
+ *   year: number,
+ *   value?: number,
+ *   target_revenue: number,
+ *   actual_revenue: number,
+ *   prev_revenue?: number,
+ *   deal_count?: number,
+ *   win_count?: number,
+ *   note?: string,
+ *   pipeline: Array<{stage_order,stage_name,stage_count,stage_amount}>,
+ *   members:  Array<{member_name,revenue,deals,wins}>,
+ *   created_by?: string,
+ *   created_by_name?: string,
+ * }} params
+ */
+export async function savePerformanceEntry(params) {
+  const res = await fetch(`${BASE_URL}/api/sales/performance/entry`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  })
+  return handleResponse(res)
+}
+
+/**
+ * 등록된 실적 원본 조회 (수정 화면 프리필)
+ * @param {string} periodKey
+ */
+export async function getPerformanceEntry(periodKey) {
+  const res = await fetch(`${BASE_URL}/api/sales/performance/entry/${encodeURIComponent(periodKey)}`)
+  return handleResponse(res)
+}
+
+/**
+ * 등록된 실적 삭제
+ * @param {string} periodKey
+ */
+export async function deletePerformanceEntry(periodKey) {
+  const res = await fetch(`${BASE_URL}/api/sales/performance/entry/${encodeURIComponent(periodKey)}`, {
+    method: 'DELETE',
   })
   return handleResponse(res)
 }
