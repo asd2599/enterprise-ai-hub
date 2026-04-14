@@ -14,6 +14,9 @@ from routers.CS.cs_response import router as cs_response_router
 from routers.CS.cs_faq import router as cs_faq_router
 from routers.CS.cs_voc import router as cs_voc_router
 from routers.CS.cs_policy import router as cs_policy_router
+from routers.marketing.mkt_copy import router as mkt_copy_router
+from routers.marketing.mkt_sns import router as mkt_sns_router
+from routers.marketing.mkt_press import router as mkt_press_router
 
 # 업로드 폴더 보장
 os.makedirs("uploads", exist_ok=True)
@@ -37,6 +40,9 @@ app.include_router(cs_response_router, prefix="/api/cs/response",  tags=["cs"])
 app.include_router(cs_faq_router,      prefix="/api/cs/faq",       tags=["cs"])
 app.include_router(cs_voc_router,      prefix="/api/cs/voc",       tags=["cs"])
 app.include_router(cs_policy_router,   prefix="/api/cs/policy",    tags=["cs"])
+app.include_router(mkt_copy_router,    prefix="/api/marketing/copy", tags=["marketing"])
+app.include_router(mkt_sns_router,     prefix="/api/marketing/sns",  tags=["marketing"])
+app.include_router(mkt_press_router,   prefix="/api/marketing/press", tags=["marketing"])
 
 
 # 업로드 이미지 정적 서빙
