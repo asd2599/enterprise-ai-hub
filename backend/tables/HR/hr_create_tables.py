@@ -39,11 +39,57 @@ TABLES = [
         )
         """,
     ),
+    (
+        "hr_notifications",
+        """
+        CREATE TABLE IF NOT EXISTS hr_notifications (
+            id                SERIAL          PRIMARY KEY,
+            notification_key  VARCHAR(255)    NOT NULL UNIQUE,
+            source            VARCHAR(100)    NOT NULL,
+            message           TEXT            NOT NULL,
+            notification_type VARCHAR(50)     NOT NULL DEFAULT 'event',
+            is_active         BOOLEAN         NOT NULL DEFAULT TRUE,
+            read_at           TIMESTAMPTZ,
+            created_at        TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+            updated_at        TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+        )
+        """,
+    ),
+    (
+        "hr_hire_requests",
+        """
+        CREATE TABLE IF NOT EXISTS hr_hire_requests (
+            id                           SERIAL          PRIMARY KEY,
+            request_key                  VARCHAR(255)    NOT NULL UNIQUE,
+            requester_employee_id        VARCHAR(50)     NOT NULL,
+            requester_name               VARCHAR(100)    NOT NULL,
+            request_department           VARCHAR(100)    NOT NULL,
+            job_title                    VARCHAR(150)    NOT NULL,
+            employment_type              VARCHAR(50)     NOT NULL,
+            experience_level             VARCHAR(50)     NOT NULL,
+            headcount                    INTEGER         NOT NULL,
+            urgency                      VARCHAR(50)     NOT NULL,
+            hiring_goal                  TEXT            NOT NULL,
+            reason                       TEXT            NOT NULL,
+            responsibilities             TEXT            NOT NULL,
+            qualifications               TEXT            NOT NULL,
+            preferred_qualifications     TEXT,
+            status                       VARCHAR(50)     NOT NULL DEFAULT 'requested',
+            generated_posting_at         TIMESTAMPTZ,
+            created_at                   TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+            updated_at                   TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+        )
+        """,
+    ),
 ]
 
 INDEXES = [
     ("idx_hr_reg_docs_active", "CREATE INDEX IF NOT EXISTS idx_hr_reg_docs_active ON hr_regulation_documents (is_active, deleted_at)"),
     ("idx_hr_reg_docs_created_at", "CREATE INDEX IF NOT EXISTS idx_hr_reg_docs_created_at ON hr_regulation_documents (created_at DESC)"),
+    ("idx_hr_notifications_active_read", "CREATE INDEX IF NOT EXISTS idx_hr_notifications_active_read ON hr_notifications (is_active, read_at)"),
+    ("idx_hr_notifications_created_at", "CREATE INDEX IF NOT EXISTS idx_hr_notifications_created_at ON hr_notifications (created_at DESC)"),
+    ("idx_hr_hire_requests_created_at", "CREATE INDEX IF NOT EXISTS idx_hr_hire_requests_created_at ON hr_hire_requests (created_at DESC)"),
+    ("idx_hr_hire_requests_department_status", "CREATE INDEX IF NOT EXISTS idx_hr_hire_requests_department_status ON hr_hire_requests (request_department, status)"),
 ]
 
 
@@ -71,7 +117,7 @@ def create_tables() -> None:
             cur.execute(ddl)
             print(f"  [OK] 인덱스: {idx_name}")
 
-        print("\n[완료] HR 규정 문서 테이블이 정상적으로 생성되었습니다.")
+        print("\n[완료] HR 관련 테이블이 정상적으로 생성되었습니다.")
     except Exception as exc:
         print(f"\n[오류] 테이블 생성 실패: {exc}", file=sys.stderr)
         sys.exit(1)
