@@ -41,6 +41,11 @@ import AccountantPage from './pages/backoffice/finance/AccountantPage';
 import TreasuryPage from './pages/backoffice/finance/TreasuryPage';
 import AuditPage from './pages/backoffice/finance/AuditPage';
 
+// 법무/컴플라이언스팀 세부 직무
+import ContractReviewPage from "./pages/backoffice/legal/ContractReviewPage";
+import ContractDraftPage from "./pages/backoffice/legal/ContractDraftPage";
+import LegalChatPage from "./pages/backoffice/legal/LegalChatPage";
+
 // Front-Office
 import StrategyPage from "./pages/frontoffice/StrategyPage";
 import SalesPage from "./pages/frontoffice/SalesPage";
@@ -99,7 +104,11 @@ function App() {
           <Route path="backoffice/hr/match" element={<Match />} />
           <Route path="backoffice/hr/evaluate" element={<Evaluate />} />
           <Route path="backoffice/hr/auto-manual" element={<AutoManual />} />
+          {/* 법무/컴플라이언스팀 — 서브 대시보드 + 세부 직무 */}
           <Route path="backoffice/legal" element={<LegalPage />} />
+          <Route path="backoffice/legal/review" element={<ContractReviewPage />} />
+          <Route path="backoffice/legal/draft" element={<ContractDraftPage />} />
+          <Route path="backoffice/legal/chat" element={<LegalChatPage />} />
           <Route path="backoffice/admin" element={<AdminPage />} />
 
           {/* 재무본부 — 서브 대시보드 + 세부 직무 */}

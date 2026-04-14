@@ -1,11 +1,10 @@
 """
 인사 규정 서비스 — DB 저장/텍스트 추출/규정 기반 질의응답
+텍스트 추출 및 RAG 유틸리티는 공통 모듈에서 import
 """
 import json
 import re
-import zlib
 from datetime import datetime
-from io import BytesIO
 from itertools import combinations
 from pathlib import Path
 
@@ -13,10 +12,18 @@ from openai import OpenAI
 
 from config import settings
 from database import get_connection
+from services.common.document_parser import (
+    _sanitize_filename,
+    extract_document_text as extract_regulation_text,  # 기존 이름 유지
+)
+from services.common.rag_utils import (
+    _chunk_text,
+    _tokenize,
+    _select_relevant_chunks,
+    _select_relevant_document_chunks,
+)
 
 client = OpenAI(api_key=settings.openai_api_key)
-
-HWP_TEXT_TAG_ID = 67
 
 REGULATION_TABLE_DDL = """
 CREATE TABLE IF NOT EXISTS hr_regulation_documents (
@@ -45,47 +52,6 @@ REGULATION_INDEXES = [
 CLAUSE_PATTERN = re.compile(r"^제\s*\d+\s*조(?:의\s*\d+)?(?:\s*\([^)]+\))?", re.MULTILINE)
 
 
-def _get_olefile_module():
-    try:
-        import olefile
-    except ImportError as exc:
-        raise RuntimeError(
-            "HWP 업로드 기능을 사용하려면 olefile 패키지가 필요합니다. "
-            "python -m pip install olefile 후 다시 시도해 주세요."
-        ) from exc
-    return olefile
-
-
-def _get_docx_document():
-    try:
-        from docx import Document
-    except ImportError as exc:
-        raise RuntimeError(
-            "DOCX 업로드 기능을 사용하려면 python-docx 패키지가 필요합니다. "
-            "python -m pip install python-docx 후 다시 시도해 주세요."
-        ) from exc
-    return Document
-
-
-def _get_pdf_reader():
-    try:
-        from pypdf import PdfReader
-    except ImportError as exc:
-        raise RuntimeError(
-            "PDF 업로드 기능을 사용하려면 pypdf 패키지가 필요합니다. "
-            "python -m pip install pypdf 후 다시 시도해 주세요."
-        ) from exc
-    return PdfReader
-
-
-def _normalize_text(text: str) -> str:
-    cleaned = text.replace("\r", "\n").replace("\x00", "")
-    cleaned = re.sub(r"[\x01-\x08\x0b-\x1f\x7f]", " ", cleaned)
-    cleaned = re.sub(r"[ \t]+", " ", cleaned)
-    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
-    return cleaned.strip()
-
-
 def _format_datetime_value(value) -> str:
     if isinstance(value, datetime):
         return value.strftime("%Y-%m-%d %H:%M:%S")
@@ -100,149 +66,6 @@ def _format_datetime_value(value) -> str:
         return parsed.strftime("%Y-%m-%d %H:%M:%S")
     except ValueError:
         return text[:19] if len(text) >= 19 else text
-
-
-def _sanitize_filename(filename: str) -> str:
-    safe = re.sub(r"[^0-9A-Za-z가-힣._-]+", "_", filename or "regulation.hwp")
-    return safe or "regulation.hwp"
-
-
-def _read_utf16_stream(ole, stream_name: str) -> str:
-    data = ole.openstream(stream_name).read()
-    for encoding in ("utf-16-le", "utf-16", "utf-8"):
-        try:
-            text = data.decode(encoding)
-            normalized = _normalize_text(text)
-            if normalized:
-                return normalized
-        except UnicodeDecodeError:
-            continue
-    return ""
-
-
-def _extract_preview_text(ole) -> str:
-    if ole.exists("PrvText"):
-        return _read_utf16_stream(ole, "PrvText")
-    return ""
-
-
-def _maybe_decompress(data: bytes) -> bytes:
-    for wbits in (-15, zlib.MAX_WBITS):
-        try:
-            return zlib.decompress(data, wbits)
-        except zlib.error:
-            continue
-    return data
-
-
-def _extract_body_text(ole) -> str:
-    section_names = []
-    for entry in ole.listdir():
-        if len(entry) == 2 and entry[0] == "BodyText" and entry[1].startswith("Section"):
-            section_names.append("/".join(entry))
-
-    texts = []
-    for stream_name in sorted(section_names):
-        raw = ole.openstream(stream_name).read()
-        data = _maybe_decompress(raw)
-        offset = 0
-
-        while offset + 4 <= len(data):
-            header = int.from_bytes(data[offset:offset + 4], "little")
-            tag_id = header & 0x3FF
-            size = (header >> 20) & 0xFFF
-            offset += 4
-
-            if size == 0xFFF:
-                if offset + 4 > len(data):
-                    break
-                size = int.from_bytes(data[offset:offset + 4], "little")
-                offset += 4
-
-            record = data[offset:offset + size]
-            offset += size
-
-            if tag_id != HWP_TEXT_TAG_ID or not record:
-                continue
-
-            try:
-                text = record.decode("utf-16-le", errors="ignore")
-            except UnicodeDecodeError:
-                continue
-
-            normalized = _normalize_text(text)
-            if normalized:
-                texts.append(normalized)
-
-    return "\n".join(texts).strip()
-
-
-def extract_hwp_text(hwp_bytes: bytes) -> str:
-    olefile = _get_olefile_module()
-    buffer = BytesIO(hwp_bytes)
-    if not olefile.isOleFile(buffer):
-        raise ValueError("올바른 HWP 파일 형식이 아닙니다.")
-
-    buffer.seek(0)
-    with olefile.OleFileIO(buffer) as ole:
-        preview_text = _extract_preview_text(ole)
-        body_text = _extract_body_text(ole)
-
-    extracted = body_text if len(body_text) >= len(preview_text) else preview_text
-    extracted = _normalize_text(extracted)
-
-    if len(extracted) < 20:
-        raise ValueError("HWP 문서에서 읽을 수 있는 텍스트를 추출하지 못했습니다.")
-
-    return extracted
-
-
-def extract_docx_text(docx_bytes: bytes) -> str:
-    Document = _get_docx_document()
-    document = Document(BytesIO(docx_bytes))
-
-    paragraphs = [
-        paragraph.text.strip()
-        for paragraph in document.paragraphs
-        if paragraph.text and paragraph.text.strip()
-    ]
-    extracted = _normalize_text("\n".join(paragraphs))
-
-    if len(extracted) < 20:
-        raise ValueError("DOCX 문서에서 읽을 수 있는 텍스트를 추출하지 못했습니다.")
-
-    return extracted
-
-
-def extract_pdf_text(pdf_bytes: bytes) -> str:
-    PdfReader = _get_pdf_reader()
-    reader = PdfReader(BytesIO(pdf_bytes))
-
-    pages = []
-    for page in reader.pages:
-        text = page.extract_text() or ""
-        normalized = _normalize_text(text)
-        if normalized:
-            pages.append(normalized)
-
-    extracted = "\n\n".join(pages).strip()
-    if len(extracted) < 20:
-        raise ValueError("PDF 문서에서 읽을 수 있는 텍스트를 추출하지 못했습니다.")
-
-    return extracted
-
-
-def extract_regulation_text(filename: str, file_bytes: bytes) -> str:
-    extension = Path(filename or "").suffix.lower()
-
-    if extension == ".hwp":
-        return extract_hwp_text(file_bytes)
-    if extension == ".docx":
-        return extract_docx_text(file_bytes)
-    if extension == ".pdf":
-        return extract_pdf_text(file_bytes)
-
-    raise ValueError("지원하지 않는 파일 형식입니다. hwp, docx, pdf만 업로드할 수 있습니다.")
 
 
 def _build_preview(text: str, max_lines: int = 3) -> str:
@@ -717,82 +540,6 @@ def get_regulation_conflicts() -> dict:
         "has_conflict": bool(conflict_items),
         "items": conflict_items,
     }
-
-
-def _chunk_text(text: str, chunk_size: int = 1200) -> list[str]:
-    paragraphs = [paragraph.strip() for paragraph in text.split("\n") if paragraph.strip()]
-    chunks = []
-    current = []
-    current_len = 0
-
-    for paragraph in paragraphs:
-        if current and current_len + len(paragraph) + 1 > chunk_size:
-            chunks.append("\n".join(current))
-            current = [paragraph]
-            current_len = len(paragraph)
-            continue
-
-        current.append(paragraph)
-        current_len += len(paragraph) + 1
-
-    if current:
-        chunks.append("\n".join(current))
-
-    return chunks or [text[:chunk_size]]
-
-
-def _tokenize(text: str) -> list[str]:
-    return re.findall(r"[0-9A-Za-z가-힣]{2,}", text.lower())
-
-
-def _select_relevant_chunks(text: str, question: str, top_k: int = 5) -> list[str]:
-    chunks = _chunk_text(text)
-    tokens = _tokenize(question)
-    scored = []
-
-    for index, chunk in enumerate(chunks):
-        lowered = chunk.lower()
-        score = 0
-        for token in tokens:
-            score += lowered.count(token) * 3
-        if question.strip() and question.strip().lower() in lowered:
-            score += 10
-        score -= index * 0.01
-        scored.append((score, chunk))
-
-    scored.sort(key=lambda item: item[0], reverse=True)
-    selected = [chunk for score, chunk in scored[:top_k] if score > 0]
-    return selected or chunks[: min(top_k, len(chunks))]
-
-
-def _select_relevant_document_chunks(documents: list[dict], question: str, top_k: int = 5) -> list[dict]:
-    tokens = _tokenize(question)
-    scored = []
-
-    for doc_index, document in enumerate(documents):
-        chunks = _chunk_text(document["text_content"])
-        for chunk_index, chunk in enumerate(chunks):
-            lowered = chunk.lower()
-            score = 0
-            for token in tokens:
-                score += lowered.count(token) * 3
-            if question.strip() and question.strip().lower() in lowered:
-                score += 10
-            score -= doc_index * 0.01
-            score -= chunk_index * 0.001
-            scored.append(
-                (
-                    score,
-                    {
-                        "file_name": document["file_name"],
-                        "chunk": chunk,
-                    },
-                )
-            )
-
-    scored.sort(key=lambda item: item[0], reverse=True)
-    selected = [item for score, item in scored[:top_k] if score > 0]
-    return selected or [item for _, item in scored[: min(top_k, len(scored))]]
 
 
 def answer_regulation_question(question: str) -> dict:
