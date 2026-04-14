@@ -82,3 +82,70 @@ export async function summarizeMeeting(params) {
   })
   return handleResponse(res)
 }
+
+/**
+ * 미팅 녹취 오디오 파일을 텍스트로 변환 (Whisper STT)
+ * @param {File} file - 오디오 파일 (mp3, m4a, wav, webm, ogg, mp4 등)
+ * @returns {{ text: string }}
+ */
+export async function transcribeMeetingAudio(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await fetch(`${BASE_URL}/api/sales/meeting/transcribe`, {
+    method: 'POST',
+    body: formData,
+  })
+  return handleResponse(res)
+}
+
+/**
+ * CRM 초안을 mock CRM 저장소에 저장 (원클릭 반영)
+ * @param {{
+ *   company_name: string,
+ *   meeting_date?: string,
+ *   opportunity_name: string,
+ *   stage: string,
+ *   next_step?: string,
+ *   contact_role?: string,
+ *   description?: string,
+ *   owner_id?: string,
+ *   owner_name?: string
+ * }} params
+ * @returns {{ id, created_at, owner_id, owner_name, ...params }}
+ */
+export async function saveCrmOpportunity(params) {
+  const res = await fetch(`${BASE_URL}/api/sales/meeting/crm-save`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  })
+  return handleResponse(res)
+}
+
+/**
+ * 영업 기회 목록 조회 (필터 지원)
+ * @param {{
+ *   ownerId?: string,     // 특정 사원만 (빈 문자열이면 전원)
+ *   companyName?: string, // 고객사명 부분 일치
+ *   search?: string,      // 자유 검색
+ *   offset?: number,
+ *   limit?: number
+ * }} [params]
+ * @returns {{ items: Array, total: number, offset: number, limit: number }}
+ */
+export async function listCrmOpportunities({
+  ownerId     = '',
+  companyName = '',
+  search      = '',
+  offset      = 0,
+  limit       = 10,
+} = {}) {
+  const qs = new URLSearchParams()
+  if (ownerId)     qs.set('owner_id',     ownerId)
+  if (companyName) qs.set('company_name', companyName)
+  if (search)      qs.set('search',       search)
+  qs.set('offset', String(offset))
+  qs.set('limit',  String(limit))
+  const res = await fetch(`${BASE_URL}/api/sales/meeting/crm-list?${qs.toString()}`)
+  return handleResponse(res)
+}

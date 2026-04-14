@@ -35,24 +35,54 @@ function formatWon(amount) {
   return `${amount.toLocaleString()}`
 }
 
-// 파이프라인 바 차트 컴포넌트
-function PipelineBar({ stages }) {
+// 전환율 병목 임계값 (백엔드 ANOMALY_RULES.conversion_bottleneck_pct 와 동일)
+const CONVERSION_BOTTLENECK_PCT = 25
+
+// 파이프라인 바 차트 + 인접 단계 전환율 라벨
+function PipelineBar({ stages, conversionRates = [] }) {
   const maxAmount = Math.max(...stages.map(s => s.amount))
   return (
-    <div className="flex flex-col gap-2">
-      {stages.map((s, i) => (
-        <div key={i} className="flex items-center gap-3">
-          <span className="w-20 shrink-0 text-xs text-gray-500 dark:text-gray-400 text-right">{s.stage}</span>
-          <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2">
-            <div
-              className="h-2 rounded-full bg-amber-400"
-              style={{ width: `${(s.amount / maxAmount) * 100}%` }}
-            />
+    <div className="flex flex-col">
+      {stages.map((s, i) => {
+        const cr = conversionRates[i] // stage[i] → stage[i+1] 전환율
+        const isBottleneck = cr && cr.rate < CONVERSION_BOTTLENECK_PCT
+        return (
+          <div key={i}>
+            <div className="flex items-center gap-3 py-1">
+              <span className="w-20 shrink-0 text-xs text-gray-500 dark:text-gray-400 text-right">{s.stage}</span>
+              <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2">
+                <div
+                  className="h-2 rounded-full bg-amber-400"
+                  style={{ width: `${(s.amount / maxAmount) * 100}%` }}
+                />
+              </div>
+              <span className="w-14 shrink-0 text-xs text-gray-600 dark:text-gray-400 text-right">{formatWon(s.amount)}</span>
+              <span className="w-10 shrink-0 text-xs text-gray-400 text-right">{s.count}건</span>
+            </div>
+            {cr && (
+              <div className="flex items-center gap-3 py-0.5">
+                <span className="w-20 shrink-0" />
+                <div className="flex-1 flex items-center gap-1.5 pl-1">
+                  <svg className={`w-3 h-3 ${isBottleneck ? 'text-red-500' : 'text-gray-300 dark:text-gray-600'}`}
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                  </svg>
+                  <span className={`text-[11px] font-medium ${
+                    isBottleneck
+                      ? 'text-red-600 dark:text-red-400'
+                      : 'text-gray-400 dark:text-gray-500'
+                  }`}>
+                    전환율 {cr.rate}%
+                    {isBottleneck && <span className="ml-1">· 병목</span>}
+                  </span>
+                </div>
+                <span className="w-14 shrink-0" />
+                <span className="w-10 shrink-0" />
+              </div>
+            )}
           </div>
-          <span className="w-14 shrink-0 text-xs text-gray-600 dark:text-gray-400 text-right">{formatWon(s.amount)}</span>
-          <span className="w-10 shrink-0 text-xs text-gray-400 text-right">{s.count}건</span>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -225,16 +255,37 @@ export default function PerformancePage() {
             <pre className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">{result.summary}</pre>
           </div>
 
-          {/* 이상 감지 */}
+          {/* 이상 감지 (규칙 기반 선감지 + LLM 원인 추정) */}
           {result.anomalies?.length > 0 && (
             <div className="flex flex-col gap-2">
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">이상 감지</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">이상 감지</p>
+                <span className="text-[10px] text-gray-400">규칙 기반 감지 · AI 원인 추정</span>
+              </div>
               {result.anomalies.map((a, i) => (
-                <div key={i} className={`rounded-xl border px-4 py-3 flex items-start gap-3 ${ANOMALY_COLOR[a.type] ?? ANOMALY_COLOR['주의']}`}>
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-current/10 shrink-0">{a.type}</span>
-                  <div>
-                    <p className="text-sm font-semibold">{a.item}</p>
-                    <p className="text-xs mt-0.5 opacity-80">{a.detail}</p>
+                <div key={i} className={`rounded-xl border px-4 py-3 ${ANOMALY_COLOR[a.type] ?? ANOMALY_COLOR['주의']}`}>
+                  <div className="flex items-start gap-3">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-white/60 dark:bg-black/30 shrink-0">{a.type}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-semibold">{a.item}</p>
+                        {a.severity && (
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                            a.severity === '높음'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-gray-500/70 text-white'
+                          }`}>
+                            {a.severity}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs mt-0.5 opacity-80">{a.detail}</p>
+                      {a.cause && (
+                        <p className="text-xs mt-2 pt-2 border-t border-current/20 opacity-90">
+                          <span className="font-semibold">원인 추정 · </span>{a.cause}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -244,7 +295,7 @@ export default function PerformancePage() {
           {/* 파이프라인 */}
           <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-5">
             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">파이프라인 현황</p>
-            <PipelineBar stages={result.pipeline} />
+            <PipelineBar stages={result.pipeline} conversionRates={result.conversion_rates} />
             <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
               {result.pipeline_insight}
             </p>
