@@ -4,8 +4,9 @@ import {
   approveEmployee,
   getPendingEmployees,
   rejectEmployee,
-} from '../../../api/auth';
+} from '../../../api/hr';
 import { CATEGORIES } from '../../../data/departments';
+import { IoMdRefresh } from 'react-icons/io';
 
 function ErrorBanner({ message }) {
   if (!message) return null;
@@ -161,7 +162,7 @@ export default function AccountApproval() {
       <div className="mt-4 space-y-6">
         <div className="rounded-xl border border-blue-200 bg-blue-50 p-6 dark:border-blue-800 dark:bg-blue-950/30">
           <span className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-            HumanResources
+            Account Approval
           </span>
           <h1 className="mt-1 text-xl font-bold text-gray-900 dark:text-white">
             계정 승인 관리
@@ -192,15 +193,16 @@ export default function AccountApproval() {
             <button
               type="button"
               onClick={fetchPendingEmployees}
-              className="rounded-lg border border-blue-200 px-4 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-50"
+              aria-label="새로고침"
+              className="inline-flex items-center justify-center rounded-xl border border-blue-200 p-3 text-blue-700 transition hover:bg-blue-50"
             >
-              새로고침
+              <IoMdRefresh className="h-5 w-5 shrink-0" aria-hidden />
             </button>
           </div>
 
           {loading ? (
             <div className="py-16 text-center text-sm text-gray-500">
-              승인 대기 목록을 불러오는 중입니다...
+              승인 대기 목록을 불러오는 중입니다 ...
             </div>
           ) : null}
 
@@ -365,7 +367,7 @@ export default function AccountApproval() {
                         className="min-h-[44px] rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
                       >
                         {savingId === item.employee_id
-                          ? '승인 중...'
+                          ? '승인 중 ...'
                           : '승인 완료'}
                       </button>
 
@@ -379,7 +381,7 @@ export default function AccountApproval() {
                         className="min-h-[44px] rounded-lg border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {rejectingId === item.employee_id
-                          ? '거절 중...'
+                          ? '거절 중 ...'
                           : '가입 거절'}
                       </button>
                     </div>
