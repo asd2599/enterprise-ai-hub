@@ -55,16 +55,6 @@ import CSPage from "./pages/frontoffice/CSPage";
 import ResponseDraftPage from "./pages/frontoffice/CS/ResponseDraftPage";
 import FaqPage from "./pages/frontoffice/CS/FaqPage";
 import VocReportPage from "./pages/frontoffice/CS/VocReportPage";
-import StrategyPage from './pages/frontoffice/StrategyPage';
-import SalesPage from './pages/frontoffice/SalesPage';
-import MarketingPage from './pages/frontoffice/MarketingPage';
-import CopywritingPage from './pages/frontoffice/Marketing/CopywritingPage';
-import SnsPage from './pages/frontoffice/Marketing/SnsPage';
-import PressPage from './pages/frontoffice/Marketing/PressPage';
-import CSPage from './pages/frontoffice/CSPage';
-import ResponseDraftPage from './pages/frontoffice/CS/ResponseDraftPage';
-import FaqPage from './pages/frontoffice/CS/FaqPage';
-import VocReportPage from './pages/frontoffice/CS/VocReportPage';
 
 // R&D / Product
 import DevPage from './pages/rnd/DevPage';
