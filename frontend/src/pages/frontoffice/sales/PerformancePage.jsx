@@ -1,7 +1,12 @@
-// 영업 실적 분석 페이지 — 모의 CRM 데이터 기반 AI 리포트
+// 영업 실적 분석 페이지 — DB 등록 실적 기반 AI 리포트
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import Breadcrumb from '../../../components/layout/Breadcrumb'
-import { getTeamMembers, analyzePerformance } from '../../../api/sales'
+import {
+  analyzePerformance,
+  getTeamMembers,
+  listPerformancePeriods,
+} from '../../../api/sales'
 
 function Spinner({ className = 'w-4 h-4' }) {
   return (
@@ -21,7 +26,12 @@ function ErrorBanner({ message }) {
   )
 }
 
-const PERIOD_OPTIONS = ['이번 달', '이번 분기', '올해']
+const PERIOD_TYPE_OPTIONS = [
+  { value: '',        label: '전체' },
+  { value: 'month',   label: '월간' },
+  { value: 'quarter', label: '분기' },
+  { value: 'year',    label: '연간' },
+]
 
 const ANOMALY_COLOR = {
   '급등':  'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300',
@@ -88,25 +98,59 @@ function PipelineBar({ stages, conversionRates = [] }) {
 }
 
 export default function PerformancePage() {
-  const [period,    setPeriod]    = useState('이번 달')
-  const [memberId,  setMemberId]  = useState('all')
-  const [members,   setMembers]   = useState([])
+  // DB 기반 기간 선택
+  const [periodType, setPeriodType] = useState('')
+  const [periods,    setPeriods]    = useState([])
+  const [periodKey,  setPeriodKey]  = useState('')
 
-  const [loading,   setLoading]   = useState(false)
-  const [error,     setError]     = useState(null)
-  const [result,    setResult]    = useState(null)
+  const [memberId, setMemberId] = useState('all')
+  const [members,  setMembers]  = useState([{ id: 'all', name: '팀 전체' }])
 
-  // 팀원 목록 로드
+  const [loading, setLoading] = useState(false)
+  const [error,   setError]   = useState(null)
+  const [result,  setResult]  = useState(null)
+
+  // 기간 목록 로드
   useEffect(() => {
-    getTeamMembers().then(setMembers).catch(() => {})
-  }, [])
+    listPerformancePeriods(periodType)
+      .then(items => {
+        setPeriods(items)
+        // 선택된 period_key가 새 목록에 없으면 가장 최신으로 교체
+        if (items.length > 0 && !items.some(p => p.period_key === periodKey)) {
+          setPeriodKey(items[0].period_key)
+        }
+        if (items.length === 0) setPeriodKey('')
+      })
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [periodType])
+
+  // 선택된 기간이 바뀌면 해당 기간 팀원 목록 재조회
+  useEffect(() => {
+    if (!periodKey) {
+      setMembers([{ id: 'all', name: '팀 전체' }])
+      return
+    }
+    getTeamMembers(periodKey)
+      .then(items => {
+        setMembers(items)
+        // 선택된 memberId가 더 이상 없으면 'all'로
+        if (!items.some(m => m.id === memberId)) setMemberId('all')
+      })
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [periodKey])
 
   async function handleAnalyze() {
+    if (!periodKey) {
+      setError('먼저 실적을 등록하고 기간을 선택해 주세요.')
+      return
+    }
     setLoading(true)
     setError(null)
     setResult(null)
     try {
-      const data = await analyzePerformance({ period, member_id: memberId })
+      const data = await analyzePerformance({ period_key: periodKey, member_id: memberId })
       setResult(data)
     } catch (e) {
       setError(e.message)
@@ -135,24 +179,35 @@ export default function PerformancePage() {
 
       {/* 헤더 */}
       <div className="mt-4 mb-6 rounded-xl border p-5 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-amber-500 text-white shrink-0">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-amber-500 text-white shrink-0">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                Front-Office · 영업/영업관리팀
+              </span>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">
+                영업 실적 분석
+              </h1>
+            </div>
+          </div>
+          <Link
+            to="/frontoffice/sales/performance-entry"
+            className="text-xs min-h-[36px] px-3 inline-flex items-center gap-1.5 rounded-lg border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
-          </div>
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-              Front-Office · 영업/영업관리팀
-            </span>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">
-              영업 실적 분석
-            </h1>
-          </div>
+            실적 등록
+          </Link>
         </div>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-          CRM 데이터를 자동 분석하여 실적 리포트·파이프라인 인사이트·이상 감지·팀장 보고 요약을 생성합니다.
+          등록된 실적 데이터를 분석하여 파이프라인 인사이트·이상 감지·팀장 보고 요약을 생성합니다.
         </p>
       </div>
 
@@ -160,25 +215,46 @@ export default function PerformancePage() {
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-5 mb-5">
         <h3 className="text-sm font-semibold text-gray-800 dark:text-white mb-4">분석 조건 설정</h3>
 
+        {/* 기간 타입 필터 */}
+        <div className="mb-4">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">기간 타입</label>
+          <div className="flex gap-2 flex-wrap">
+            {PERIOD_TYPE_OPTIONS.map(t => (
+              <button
+                key={t.value}
+                onClick={() => setPeriodType(t.value)}
+                className={`min-h-[36px] px-4 text-sm font-medium rounded-xl border transition-colors ${
+                  periodType === t.value
+                    ? 'border-amber-400 bg-amber-500 text-white'
+                    : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-amber-300'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* 기간 선택 */}
+          {/* 기간 드롭다운 */}
           <div>
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">분석 기간</label>
-            <div className="flex gap-2">
-              {PERIOD_OPTIONS.map(p => (
-                <button
-                  key={p}
-                  onClick={() => setPeriod(p)}
-                  className={`flex-1 min-h-[44px] text-sm font-medium rounded-xl border transition-colors ${
-                    period === p
-                      ? 'border-amber-400 bg-amber-500 text-white'
-                      : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-amber-300'
-                  }`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
+            <select
+              value={periodKey}
+              onChange={e => setPeriodKey(e.target.value)}
+              disabled={periods.length === 0}
+              className="w-full text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-2.5 min-h-[44px] focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-50"
+            >
+              {periods.length === 0 ? (
+                <option value="">— 등록된 실적 없음 —</option>
+              ) : (
+                periods.map(p => (
+                  <option key={p.period_key} value={p.period_key}>
+                    {p.period_label} ({p.period_key})
+                  </option>
+                ))
+              )}
+            </select>
           </div>
 
           {/* 팀원 선택 */}
@@ -187,7 +263,8 @@ export default function PerformancePage() {
             <select
               value={memberId}
               onChange={e => setMemberId(e.target.value)}
-              className="w-full text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-2.5 min-h-[44px] focus:outline-none focus:ring-2 focus:ring-amber-400"
+              disabled={!periodKey}
+              className="w-full text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-2.5 min-h-[44px] focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-50"
             >
               {members.map(m => (
                 <option key={m.id} value={m.id}>{m.name}</option>
@@ -195,12 +272,24 @@ export default function PerformancePage() {
             </select>
           </div>
         </div>
+
+        {periods.length === 0 && (
+          <div className="mt-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 px-4 py-3">
+            <p className="text-xs text-amber-700 dark:text-amber-300">
+              아직 등록된 실적이 없습니다.{' '}
+              <Link to="/frontoffice/sales/performance-entry" className="font-semibold underline">
+                실적 등록 페이지
+              </Link>
+              에서 먼저 데이터를 등록해 주세요.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* 분석 버튼 */}
       <button
         onClick={handleAnalyze}
-        disabled={loading}
+        disabled={loading || !periodKey}
         className="w-full min-h-[44px] rounded-xl bg-amber-500 hover:bg-amber-600
           disabled:bg-gray-300 dark:disabled:bg-gray-700
           text-white text-sm font-semibold transition-colors mb-6
