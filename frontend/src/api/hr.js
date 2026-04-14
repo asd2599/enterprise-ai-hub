@@ -9,6 +9,9 @@ const APPROVE_ENDPOINT =
   import.meta.env.VITE_AUTH_APPROVE_ENDPOINT || '/api/auth/approve'
 const REJECT_ENDPOINT =
   import.meta.env.VITE_AUTH_REJECT_ENDPOINT || '/api/auth/reject'
+const ACCOUNT_DECISIONS_ENDPOINT =
+  import.meta.env.VITE_AUTH_ACCOUNT_DECISIONS_ENDPOINT ||
+  '/api/auth/account-decisions'
 
 async function handleResponse(res) {
   if (!res.ok) {
@@ -25,6 +28,11 @@ export async function getPendingEmployees() {
 
 export async function getEmployees() {
   const response = await apiRequest(EMPLOYEES_ENDPOINT)
+  return response.json().catch(() => ({ total: 0, items: [] }))
+}
+
+export async function getAccountDecisions() {
+  const response = await apiRequest(ACCOUNT_DECISIONS_ENDPOINT)
   return response.json().catch(() => ({ total: 0, items: [] }))
 }
 
@@ -49,13 +57,19 @@ export async function updateEmployeeDepartment(employeeId, payload) {
   return response.json().catch(() => ({}))
 }
 
-export async function rejectEmployee(employeeId) {
-  const response = await apiRequest(`${REJECT_ENDPOINT}/${employeeId}`, {
-    method: 'DELETE',
+const DEFAULT_REJECT_REASON = '정보 불일치'
+
+export async function rejectEmployee(employeeId, options = {}) {
+  const reason = (options.reason ?? DEFAULT_REJECT_REASON).trim() || DEFAULT_REJECT_REASON
+  const response = await apiRequest(REJECT_ENDPOINT, {
+    method: 'POST',
+    body: JSON.stringify({ employee_id: employeeId, reason }),
   })
 
   return response.json().catch(() => ({}))
 }
+
+export { DEFAULT_REJECT_REASON }
 
 export async function getRegulationDocuments() {
   const res = await fetch(`${BASE_URL}/api/hr/regulations`)
@@ -149,4 +163,59 @@ export async function generateJobPost(requestId) {
     body: JSON.stringify({ request_id: requestId }),
   })
   return handleResponse(res)
+}
+
+const ISSUED_EMPLOYEE_IDS_BASE = '/api/auth/issued-employee-ids'
+
+export async function getIssueDepartmentCodes() {
+  const response = await apiRequest(
+    `${ISSUED_EMPLOYEE_IDS_BASE}/department-codes`,
+  )
+  return response.json().catch(() => ({ items: [] }))
+}
+
+/** 다음 발급에 쓰일 일련 3자리 목록 (count 1~200, 일괄 발급 총합과 동일 상한) */
+export async function getUpcomingIssuedSerials(count = 1) {
+  const n = Math.min(200, Math.max(1, Number(count) || 1))
+  const response = await apiRequest(
+    `${ISSUED_EMPLOYEE_IDS_BASE}/upcoming-serials?count=${n}`,
+  )
+  return response.json().catch(() => ({ count: 0, serials: [] }))
+}
+
+export async function generateIssuedEmployeeIds(count = 1, departmentCode) {
+  const response = await apiRequest(`${ISSUED_EMPLOYEE_IDS_BASE}/generate`, {
+    method: 'POST',
+    body: JSON.stringify({
+      count,
+      department_code: String(departmentCode || '').trim().toUpperCase(),
+    }),
+  })
+  return response.json().catch(() => ({ total: 0, items: [] }))
+}
+
+/** batches: [{ department_code, count }, ...] — 여러 부서·건수를 한 번에 발급 */
+export async function generateIssuedEmployeeIdsBatch(batches) {
+  const response = await apiRequest(
+    `${ISSUED_EMPLOYEE_IDS_BASE}/generate-batch`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ batches }),
+    },
+  )
+  return response.json().catch(() => ({ total: 0, items: [], summary: [] }))
+}
+
+export async function getIssuedEmployeeIds() {
+  const response = await apiRequest(ISSUED_EMPLOYEE_IDS_BASE)
+  return response.json().catch(() => ({ total: 0, items: [] }))
+}
+
+/** 미사용(가입 전) 발급 사번만 삭제 — 전역 일련 카운터는 줄지 않음 */
+export async function deleteIssuedEmployeeId(employeeId) {
+  const enc = encodeURIComponent(String(employeeId || '').trim())
+  const response = await apiRequest(`${ISSUED_EMPLOYEE_IDS_BASE}/${enc}`, {
+    method: 'DELETE',
+  })
+  return response.json().catch(() => ({}))
 }

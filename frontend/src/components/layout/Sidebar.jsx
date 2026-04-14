@@ -1,9 +1,12 @@
 // 사이드바 컴포넌트 — 카테고리 & 부서 네비게이션
-import { NavLink, useParams } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { CATEGORIES, COLOR_THEMES } from '../../data/departments'
 
 function Sidebar({ isOpen, onClose }) {
-  const { categoryId, deptId } = useParams()
+  const { pathname } = useLocation()
+  const segments = pathname.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean)
+  const categoryId = segments[0] ?? ''
+  const deptId = segments[1] ?? ''
 
   return (
     <>

@@ -32,6 +32,8 @@ import UploadRegulation from './pages/backoffice/HR/UploadRegulation';
 import Pay from './pages/backoffice/HR/Pay';
 import HumanResources from './pages/backoffice/HR/HumanResources';
 import AccountApproval from './pages/backoffice/HR/AccountApproval';
+import EmployeeIdGenerator from './pages/backoffice/HR/EmployeeIdGenerator';
+import Departments from './pages/backoffice/HR/Departments';
 import Match from './pages/backoffice/HR/Match';
 import Evaluate from './pages/backoffice/HR/Evaluate';
 import AutoManual from './pages/backoffice/HR/AutoManual';
@@ -77,9 +79,6 @@ function App() {
           <Route index element={<DashboardPage />} />
           <Route path="setting" element={<Setting />} />
 
-          {/* 카테고리 페이지 */}
-          <Route path=":categoryId" element={<CategoryPage />} />
-
           {/* Back-Office 부서 */}
           <Route path="backoffice/hr" element={<HRPage />} />
           <Route path="backoffice/hr/hire-create" element={<HireCreate />} />
@@ -102,6 +101,11 @@ function App() {
             path="backoffice/hr/account-approval"
             element={<AccountApproval />}
           />
+          <Route
+            path="backoffice/hr/employee-id-generator"
+            element={<EmployeeIdGenerator />}
+          />
+          <Route path="backoffice/hr/departments" element={<Departments />} />
           <Route path="backoffice/hr/match" element={<Match />} />
           <Route path="backoffice/hr/evaluate" element={<Evaluate />} />
           <Route path="backoffice/hr/auto-manual" element={<AutoManual />} />
@@ -153,6 +157,9 @@ function App() {
           <Route path="rnd/dev" element={<DevPage />} />
           <Route path="rnd/qa" element={<QAPage />} />
           <Route path="rnd/design" element={<DesignPage />} />
+
+          {/* 동적 카테고리 — 위의 고정 경로보다 뒤에 두어 /backoffice/hr 등과 충돌하지 않게 함 */}
+          <Route path=":categoryId" element={<CategoryPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -1,15 +1,15 @@
-import { useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { registerEmployee } from '../../api/auth'
+import { useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { registerEmployee } from '../../api/auth';
 
 const FIELD_CLASSNAME =
-  'w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 placeholder:text-gray-400'
+  'w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 placeholder:text-gray-400';
 
 function formatBirthDateForApi(value) {
-  if (!value) return null
-  if (value.length !== 8) return null
+  if (!value) return null;
+  if (value.length !== 8) return null;
 
-  return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`
+  return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`;
 }
 
 const INITIAL_FORM = {
@@ -21,7 +21,7 @@ const INITIAL_FORM = {
   phone_number: '',
   birth_date: '',
   nickname: '',
-}
+};
 
 const REQUIRED_FIELDS = [
   'employee_id',
@@ -29,45 +29,51 @@ const REQUIRED_FIELDS = [
   'email',
   'password',
   'phone_number',
-]
+];
 
 export default function Register() {
-  const navigate = useNavigate()
-  const [form, setForm] = useState(INITIAL_FORM)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const navigate = useNavigate();
+  const [form, setForm] = useState(INITIAL_FORM);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const passwordMismatch =
-    form.confirmPassword.length > 0 && form.password !== form.confirmPassword
+    form.confirmPassword.length > 0 && form.password !== form.confirmPassword;
   const birthDateInvalid =
-    form.birth_date.length > 0 && form.birth_date.length !== 8
+    form.birth_date.length > 0 && form.birth_date.length !== 8;
 
   const isDisabled = useMemo(() => {
     const hasEmptyRequiredField = REQUIRED_FIELDS.some(
       (field) => !form[field].trim(),
-    )
+    );
 
-    return hasEmptyRequiredField || passwordMismatch || birthDateInvalid || loading
-  }, [birthDateInvalid, form, loading, passwordMismatch])
+    return (
+      hasEmptyRequiredField || passwordMismatch || birthDateInvalid || loading
+    );
+  }, [birthDateInvalid, form, loading, passwordMismatch]);
 
   function handleChange(event) {
-    const { name, value } = event.target
-    const nextValue =
-      name === 'birth_date' ? value.replace(/\D/g, '').slice(0, 8) : value
+    const { name, value } = event.target;
+    let nextValue = value;
+    if (name === 'birth_date') {
+      nextValue = value.replace(/\D/g, '').slice(0, 8);
+    } else if (name === 'phone_number') {
+      nextValue = value.replace(/\D/g, '').slice(0, 15);
+    }
 
-    setForm((prev) => ({ ...prev, [name]: nextValue }))
+    setForm((prev) => ({ ...prev, [name]: nextValue }));
   }
 
   async function handleSubmit(event) {
-    event.preventDefault()
+    event.preventDefault();
 
     if (passwordMismatch) {
-      setError('비밀번호와 비밀번호 확인이 일치하지 않습니다.')
-      return
+      setError('비밀번호와 비밀번호 확인이 일치하지 않습니다.');
+      return;
     }
 
-    setLoading(true)
-    setError('')
+    setLoading(true);
+    setError('');
 
     try {
       const payload = {
@@ -75,12 +81,12 @@ export default function Register() {
         name: form.name.trim(),
         email: form.email.trim(),
         password: form.password,
-        phone_number: form.phone_number.trim(),
+        phone_number: form.phone_number.replace(/\D/g, ''),
         birth_date: formatBirthDateForApi(form.birth_date),
         nickname: form.nickname.trim() || null,
-      }
+      };
 
-      await registerEmployee(payload)
+      await registerEmployee(payload);
 
       navigate('/login', {
         state: {
@@ -88,11 +94,11 @@ export default function Register() {
           message:
             '회원가입 요청이 완료되었습니다. 인사팀 승인 후 부서와 직급이 배정됩니다.',
         },
-      })
+      });
     } catch (submitError) {
-      setError(submitError.message || '회원가입 중 오류가 발생했습니다.')
+      setError(submitError.message || '회원가입 중 오류가 발생했습니다.');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -107,9 +113,9 @@ export default function Register() {
             사원 계정 회원가입
           </h1>
           <p className="mt-4 text-sm leading-6 text-indigo-50">
-            가입 시 기본 인적 정보만 입력하고, 인사팀이 승인한 뒤 부서와 직급을
-            배정하는 흐름으로 구성했습니다. 승인 상태와 활성화 여부는 서버에서
-            관리합니다.
+            <strong>인사팀 사번 생성기에서 발급된 사번</strong>으로만 가입할 수
+            있습니다. 가입 시 기본 인적 정보만 입력하고, 인사팀이 승인한 뒤
+            부서와 직급을 배정합니다.
           </p>
 
           <div className="mt-8 space-y-4">
@@ -118,7 +124,7 @@ export default function Register() {
                 필수 입력
               </p>
               <p className="mt-2 text-sm text-white/90">
-                사번, 이름, 이메일, 전화번호, 비밀번호, 비밀번호 확인
+                발급된 사번, 이름, 이메일, 전화번호, 비밀번호, 비밀번호 확인
               </p>
             </div>
 
@@ -169,9 +175,12 @@ export default function Register() {
                   type="text"
                   value={form.employee_id}
                   onChange={handleChange}
-                  placeholder="예: EMP-2026-001"
+                  placeholder="예: BHR26-00047"
                   className={FIELD_CLASSNAME}
                 />
+                <p className="mt-1.5 text-xs text-gray-500">
+                  안내받은 사번을 입력하세요.
+                </p>
               </label>
 
               <label className="block">
@@ -209,11 +218,16 @@ export default function Register() {
                 <input
                   name="phone_number"
                   type="text"
+                  inputMode="numeric"
+                  autoComplete="tel"
                   value={form.phone_number}
                   onChange={handleChange}
-                  placeholder="010-0000-0000"
+                  placeholder="01012345678"
                   className={FIELD_CLASSNAME}
                 />
+                <p className="mt-1.5 text-xs text-gray-500">
+                  하이픈(-) 없이 숫자만 입력하세요.
+                </p>
               </label>
 
               <label className="block">
@@ -294,8 +308,7 @@ export default function Register() {
             ) : null}
 
             <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
-              가입 후 바로 부서와 직급이 생성되지 않으며, 인사팀 승인 단계에서
-              최종 배정됩니다.
+              인사팀 승인 후 로그인 가능합니다.
             </div>
 
             <button
@@ -303,11 +316,11 @@ export default function Register() {
               disabled={isDisabled}
               className="flex min-h-[48px] w-full items-center justify-center rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
-              {loading ? '회원가입 처리 중...' : '회원가입'}
+              {loading ? '회원가입 중 ...' : '회원가입'}
             </button>
           </form>
         </section>
       </div>
     </div>
-  )
+  );
 }
