@@ -14,15 +14,19 @@ import LegalPage    from './pages/backoffice/LegalPage'
 import AdminPage    from './pages/backoffice/AdminPage'
 import HireCreate   from './pages/backoffice/HR/HireCreate'
 import HireRequest  from './pages/backoffice/HR/HireRequest'
-import QGenerate    from './pages/backoffice/HR/QGenerate'
+// 면접 질문 자동생성 — 페이지 숨김 시 아래·라우트 함께 주석 해제
+// import QGenerate    from './pages/backoffice/HR/QGenerate'
 import RegulationChat from './pages/backoffice/HR/RegulationChat'
 import UploadRegulation from './pages/backoffice/HR/UploadRegulation'
-import Pay          from './pages/backoffice/HR/Pay'
+// 급여 관리
+// import Pay          from './pages/backoffice/HR/Pay'
 import Departments  from './pages/backoffice/HR/Departments'
 import HumanResources from './pages/backoffice/HR/HumanResources'
 import AccountApproval from './pages/backoffice/HR/AccountApproval'
-import Match        from './pages/backoffice/HR/Match'
+// 인재 매칭
+// import Match        from './pages/backoffice/HR/Match'
 import Evaluate     from './pages/backoffice/HR/Evaluate'
+// 온보딩 자료 자동화
 import AutoManual   from './pages/backoffice/HR/AutoManual'
 
 // 재무본부 세부 직무
@@ -64,16 +68,20 @@ function App() {
           <Route path="backoffice/hr"      element={<HRPage />} />
           <Route path="backoffice/hr/hire-create"    element={<HireCreate />} />
           <Route path="backoffice/hr/hire-request"   element={<HireRequest />} />
-          <Route path="backoffice/hr/q-generate"     element={<QGenerate />} />
+          {/* 면접 질문 자동생성 — 숨김 (import 복구 후 같이 해제) */}
+          {/* <Route path="backoffice/hr/q-generate"     element={<QGenerate />} /> */}
           <Route path="backoffice/hr/regulation-chat" element={<RegulationChat />} />
           <Route path="backoffice/hr/upload-regulation" element={<UploadRegulation />} />
-          <Route path="backoffice/hr/pay"            element={<Pay />} />
+          {/* 급여 관리 — 숨김 (import 복구 후 같이 해제) */}
+          {/* <Route path="backoffice/hr/pay"            element={<Pay />} /> */}
           <Route path="backoffice/hr/departments" element={<Departments />} />
           <Route path="backoffice/hr/humanresources" element={<HumanResources />} />
           <Route path="backoffice/hr/account-approval" element={<AccountApproval />} />
-          <Route path="backoffice/hr/match"          element={<Match />} />
+          {/* 인재 매칭 — 숨김 (import 복구 후 같이 해제) */}
+          {/* <Route path="backoffice/hr/match"          element={<Match />} /> */}
           <Route path="backoffice/hr/evaluate"       element={<Evaluate />} />
-          <Route path="backoffice/hr/auto-manual"    element={<AutoManual />} />
+          {/* 온보딩 자료 자동화 — 숨김 (import 복구 후 같이 해제) */}
+          {/* <Route path="backoffice/hr/auto-manual"    element={<AutoManual />} /> */}
           <Route path="backoffice/legal"   element={<LegalPage />} />
           <Route path="backoffice/admin"   element={<AdminPage />} />
 

@@ -11,6 +11,7 @@ from routers.finance import router as finance_router
 from routers.auth import router as auth_router
 from routers.HR.employee_management import router as hr_employee_router
 from routers.HR.regulations import router as hr_router
+from routers.HR.recruitment import router as hr_recruitment_router
 from routers.CS.cs_response import router as cs_response_router
 from routers.CS.cs_faq import router as cs_faq_router
 from routers.CS.cs_voc import router as cs_voc_router
@@ -38,6 +39,7 @@ app.include_router(auth_router,        prefix="/api/auth",         tags=["auth"]
 app.include_router(hr_employee_router, prefix="/api/auth",         tags=["hr"])
 app.include_router(finance_router,     prefix="/api/finance")
 app.include_router(hr_router,          prefix="/api/hr",           tags=["hr"])
+app.include_router(hr_recruitment_router, prefix="/api/hr",        tags=["hr"])
 app.include_router(cs_response_router, prefix="/api/cs/response",  tags=["cs"])
 app.include_router(cs_faq_router,      prefix="/api/cs/faq",       tags=["cs"])
 app.include_router(cs_voc_router,      prefix="/api/cs/voc",       tags=["cs"])

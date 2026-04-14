@@ -65,6 +65,8 @@ const HR_TOOLS = [
       />
     ),
   },
+  /*
+  // 면접 질문 자동생성 — /backoffice/hr/q-generate (숨김: 다시 쓸 때 주석 해제)
   {
     id: 'q-generate',
     label: '면접 질문 자동 생성',
@@ -81,6 +83,7 @@ const HR_TOOLS = [
       />
     ),
   },
+  */
   {
     id: 'upload-regulation',
     label: '규정 문서 업로드',
@@ -113,6 +116,8 @@ const HR_TOOLS = [
       />
     ),
   },
+  /*
+  // 급여 관리 — /backoffice/hr/pay (숨김: 다시 쓸 때 주석 해제)
   {
     id: 'pay',
     label: '급여 관리',
@@ -129,6 +134,7 @@ const HR_TOOLS = [
       />
     ),
   },
+  */
   {
     id: 'departments',
     label: '부서',
@@ -145,6 +151,8 @@ const HR_TOOLS = [
       />
     ),
   },
+  /*
+  // 인재 매칭 — /backoffice/hr/match (숨김: 다시 쓸 때 주석 해제)
   {
     id: 'match',
     label: '인재 매칭',
@@ -161,6 +169,7 @@ const HR_TOOLS = [
       />
     ),
   },
+  */
   {
     id: 'evaluate',
     label: '인사 평가 보고서 작성',
@@ -177,6 +186,8 @@ const HR_TOOLS = [
       />
     ),
   },
+  /*
+  // 온보딩 자료 자동화 — /backoffice/hr/auto-manual (숨김: 다시 쓸 때 주석 해제)
   {
     id: 'auto-manual',
     label: '온보딩 자료 자동화',
@@ -193,6 +204,7 @@ const HR_TOOLS = [
       />
     ),
   },
+  */
 ];
 
 export default function HRPage() {
@@ -226,7 +238,7 @@ export default function HRPage() {
           있습니다.
         </p>
         <span className="inline-block mt-3 text-xs px-2.5 py-1 rounded-full font-medium bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
-          인사 도구 12개
+          인사 도구 8개
         </span>
       </div>
 

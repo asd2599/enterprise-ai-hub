@@ -127,3 +127,26 @@ export async function askRegulationQuestion(question) {
   })
   return handleResponse(res)
 }
+
+export async function getHireRequests() {
+  const res = await fetch(`${BASE_URL}/api/hr/hire-requests`)
+  return handleResponse(res)
+}
+
+export async function createHireRequest(payload) {
+  const res = await fetch(`${BASE_URL}/api/hr/hire-requests`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  return handleResponse(res)
+}
+
+export async function generateJobPost(requestId) {
+  const res = await fetch(`${BASE_URL}/api/hr/job-post/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ request_id: requestId }),
+  })
+  return handleResponse(res)
+}
