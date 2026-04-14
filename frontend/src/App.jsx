@@ -78,9 +78,6 @@ function App() {
           <Route index element={<DashboardPage />} />
           <Route path="setting" element={<Setting />} />
 
-          {/* 카테고리 페이지 */}
-          <Route path=":categoryId" element={<CategoryPage />} />
-
           {/* Back-Office 부서 */}
           <Route path="backoffice/hr" element={<HRPage />} />
           <Route path="backoffice/hr/hire-create" element={<HireCreate />} />
@@ -158,6 +155,9 @@ function App() {
           <Route path="rnd/dev" element={<DevPage />} />
           <Route path="rnd/qa" element={<QAPage />} />
           <Route path="rnd/design" element={<DesignPage />} />
+
+          {/* 동적 카테고리 — 위의 고정 경로보다 뒤에 두어 /backoffice/hr 등과 충돌하지 않게 함 */}
+          <Route path=":categoryId" element={<CategoryPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

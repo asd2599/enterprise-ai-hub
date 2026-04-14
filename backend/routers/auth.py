@@ -191,6 +191,8 @@ def update_profile(body: UpdateProfileRequest):
         raise HTTPException(status_code=400, detail="이름, 이메일, 전화번호는 필수입니다.")
 
     conn = get_connection()
+    prev_autocommit = conn.autocommit
+    conn.autocommit = False
     cur = conn.cursor()
 
     try:
@@ -258,11 +260,15 @@ def update_profile(body: UpdateProfileRequest):
         row = cur.fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="수정할 계정을 찾을 수 없습니다.")
+        conn.commit()
     except HTTPException:
+        conn.rollback()
         raise
     except Exception as exc:
+        conn.rollback()
         raise HTTPException(status_code=500, detail=f"내 정보 수정 실패: {str(exc)}")
     finally:
+        conn.autocommit = prev_autocommit
         cur.close()
         conn.close()
 
@@ -317,13 +323,11 @@ def login_employee(body: LoginRequest):
 
         is_verified = row[6]
         is_active = row[7]
-        department = row[4]
-        position = row[5]
 
+        # 비활성화된 승인 계정은 로그인 차단
         if is_verified and not is_active:
             raise HTTPException(status_code=403, detail="비활성화된 계정입니다.")
-        if is_verified and (not department or not position):
-            raise HTTPException(status_code=403, detail="부서 또는 직급이 아직 배정되지 않았습니다.")
+        # 부서/직급 미배정은 차단하지 않음 — 프론트엔드에서 안내 메시지로 처리
     except HTTPException:
         raise
     except Exception as exc:
@@ -333,12 +337,16 @@ def login_employee(body: LoginRequest):
         conn.close()
 
     birth_date = row[8]
+    department = row[4]
+    position = row[5]
     approval_status = "approved" if row[6] else "pending_approval"
-    message = (
-        f"{row[1]}님, 로그인되었습니다. 현재 인사팀 승인 대기 상태입니다."
-        if approval_status == "pending_approval"
-        else f"{row[1]}님, 로그인되었습니다."
-    )
+
+    if approval_status == "pending_approval":
+        message = f"{row[1]}님, 로그인되었습니다. 현재 인사팀 승인 대기 상태입니다."
+    elif not department or not position:
+        message = f"{row[1]}님, 로그인되었습니다. 부서/직급이 아직 배정되지 않았습니다."
+    else:
+        message = f"{row[1]}님, 로그인되었습니다."
 
     return {
         "employee": {
