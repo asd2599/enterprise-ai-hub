@@ -1,3 +1,4 @@
+// 온보딩 자료 자동화 — HR 도구 (/backoffice/hr/auto-manual)
 import Breadcrumb from '../../../components/layout/Breadcrumb';
 
 export default function AutoManual() {
