@@ -38,19 +38,22 @@ const TOOL_ICONS = {
   ),
 }
 
-function ToolCard({ tool, theme, onClick }) {
+function ToolCard({ tool, theme, onClick, availabilityBadge }) {
+  const available = !tool.disabled && (!availabilityBadge || Boolean(tool.path))
+
   return (
     <button
       onClick={onClick}
+      disabled={!available}
       className={[
-        'group text-left w-full rounded-xl border bg-white dark:bg-gray-900 p-5',
-        'transition-all duration-150 hover:shadow-md active:scale-[0.98] cursor-pointer',
-        theme.cardBorder,
-        theme.cardHover,
+        'group text-left w-full rounded-xl border p-5 transition-all duration-150',
+        available
+          ? `bg-white dark:bg-gray-900 hover:shadow-md active:scale-[0.98] cursor-pointer ${theme.cardBorder} ${theme.cardHover}`
+          : 'bg-gray-50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700 cursor-default opacity-60',
       ].join(' ')}
     >
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${theme.badge}`}>
-        <svg className={`w-5 h-5 ${theme.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${available ? theme.badge : 'bg-gray-100 dark:bg-gray-800'}`}>
+        <svg className={`w-5 h-5 ${available ? theme.text : 'text-gray-400 dark:text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           {TOOL_ICONS[tool.icon] ?? TOOL_ICONS.document}
         </svg>
       </div>
@@ -60,12 +63,18 @@ function ToolCard({ tool, theme, onClick }) {
       <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-4">
         {tool.description}
       </p>
-      <div className={`flex items-center gap-1 text-xs font-medium ${theme.text}`}>
-        도구 사용하기
-        <svg className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </div>
+      {available ? (
+        <div className={`flex items-center gap-1 text-xs font-medium ${theme.text}`}>
+          도구 사용하기
+          <svg className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      ) : (
+        <span className="inline-block rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-400 dark:bg-gray-800 dark:text-gray-500">
+          준비 중
+        </span>
+      )}
     </button>
   )
 }
@@ -75,6 +84,7 @@ function DeptPageLayout({
   categoryId,
   deptId,
   toolGridClassName = 'grid-cols-1 sm:grid-cols-2',
+  availabilityBadge = false,
 }) {
   const navigate = useNavigate()
   const cat = CATEGORY_MAP[categoryId]
@@ -129,7 +139,8 @@ function DeptPageLayout({
               key={tool.id}
               tool={tool}
               theme={theme}
-              onClick={tool.path ? () => navigate(tool.path) : undefined}
+              availabilityBadge={availabilityBadge}
+              onClick={!tool.disabled && tool.path ? () => navigate(tool.path) : undefined}
             />
           ))}
         </div>

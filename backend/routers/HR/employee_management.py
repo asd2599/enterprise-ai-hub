@@ -3,6 +3,8 @@
 """
 from datetime import date
 
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
@@ -81,6 +83,7 @@ class RejectEmployeeRequest(BaseModel):
 class UpdateEmployeeDepartmentRequest(BaseModel):
     department: str
     reason: str
+    position: Optional[str] = None
 
 
 @router.post("/reject")
@@ -255,6 +258,7 @@ def update_employee_department(employee_id: str, body: UpdateEmployeeDepartmentR
     employee_id = normalize_employee_id(employee_id)
     department = body.department.strip()
     reason = body.reason.strip()
+    position = body.position.strip() if body.position else None
 
     if not employee_id or not department or not reason:
         raise HTTPException(status_code=400, detail="사번, 변경할 부서, 변경 사유는 모두 필수입니다.")
@@ -281,12 +285,13 @@ def update_employee_department(employee_id: str, body: UpdateEmployeeDepartmentR
             """
             UPDATE info_employees
                SET department = %s,
+                   position = COALESCE(%s, position),
                    updated_at = NOW()
              WHERE employee_id = %s
                AND is_verified = TRUE
             RETURNING employee_id, name, department, position, updated_at
             """,
-            (department, employee_id),
+            (department, position, employee_id),
         )
         row = cur.fetchone()
         if not row:
@@ -312,6 +317,7 @@ def update_employee_department(employee_id: str, body: UpdateEmployeeDepartmentR
         "updated_at": str(row[4]),
         "message": "사원 부서가 변경되었습니다.",
     }
+
 
 
 @router.get("/pending")

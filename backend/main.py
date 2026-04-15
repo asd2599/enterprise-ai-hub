@@ -26,6 +26,10 @@ from routers.procurement import router as procurement_router
 from routers.sales.sales_proposal import router as sales_proposal_router
 from routers.sales.sales_performance import router as sales_performance_router
 from routers.sales.sales_meeting import router as sales_meeting_router
+from routers.dev.dev_log import router as dev_log_router
+from routers.dev.dev_docs import router as dev_docs_router
+from routers.dev.dev_release import router as dev_release_router
+from routers.dev.dev_translate import router as dev_translate_router
 
 # 업로드 폴더 보장
 os.makedirs("uploads", exist_ok=True)
@@ -60,7 +64,11 @@ app.include_router(mkt_press_router,       prefix="/api/marketing/press",       
 app.include_router(sales_proposal_router,   prefix="/api/sales/proposal",         tags=["sales"])
 app.include_router(sales_performance_router, prefix="/api/sales/performance",     tags=["sales"])
 app.include_router(sales_meeting_router,    prefix="/api/sales/meeting",          tags=["sales"])
-app.include_router(strategy_router,         prefix="/api/strategy",               tags=["strategy"])
+app.include_router(dev_log_router,         prefix="/api/dev/log",                tags=["dev"])
+app.include_router(dev_docs_router,        prefix="/api/dev/docs",               tags=["dev"])
+app.include_router(dev_release_router,     prefix="/api/dev/release",            tags=["dev"])
+app.include_router(dev_translate_router,   prefix="/api/dev/translate",          tags=["dev"])
+app.include_router(strategy_router,        prefix="/api/strategy",               tags=["strategy"])
 
 
 # 업로드 이미지 정적 서빙
