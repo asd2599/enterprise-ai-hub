@@ -32,6 +32,8 @@ import UploadRegulation from './pages/backoffice/HR/UploadRegulation';
 import Pay from './pages/backoffice/HR/Pay';
 import HumanResources from './pages/backoffice/HR/HumanResources';
 import AccountApproval from './pages/backoffice/HR/AccountApproval';
+import EmployeeIdGenerator from './pages/backoffice/HR/EmployeeIdGenerator';
+import Departments from './pages/backoffice/HR/Departments';
 import Match from './pages/backoffice/HR/Match';
 import Evaluate from './pages/backoffice/HR/Evaluate';
 import AutoManual from './pages/backoffice/HR/AutoManual';
@@ -61,6 +63,7 @@ import SnsPage from "./pages/frontoffice/Marketing/SnsPage";
 import PressPage from "./pages/frontoffice/Marketing/PressPage";
 import ProposalPage from "./pages/frontoffice/sales/ProposalPage";
 import PerformancePage from "./pages/frontoffice/sales/PerformancePage";
+import PerformanceEntryPage from "./pages/frontoffice/sales/PerformanceEntryPage";
 import MeetingPage from "./pages/frontoffice/sales/MeetingPage";
 import CSPage from "./pages/frontoffice/CSPage";
 import ResponseDraftPage from "./pages/frontoffice/CS/ResponseDraftPage";
@@ -81,9 +84,6 @@ function App() {
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="setting" element={<Setting />} />
-
-          {/* 카테고리 페이지 */}
-          <Route path=":categoryId" element={<CategoryPage />} />
 
           {/* Back-Office 부서 */}
           <Route path="backoffice/hr" element={<HRPage />} />
@@ -107,6 +107,11 @@ function App() {
             path="backoffice/hr/account-approval"
             element={<AccountApproval />}
           />
+          <Route
+            path="backoffice/hr/employee-id-generator"
+            element={<EmployeeIdGenerator />}
+          />
+          <Route path="backoffice/hr/departments" element={<Departments />} />
           <Route path="backoffice/hr/match" element={<Match />} />
           <Route path="backoffice/hr/evaluate" element={<Evaluate />} />
           <Route path="backoffice/hr/auto-manual" element={<AutoManual />} />
@@ -141,8 +146,9 @@ function App() {
           <Route path="frontoffice/strategy" element={<StrategyPage />} />
           <Route path="frontoffice/sales" element={<SalesPage />} />
           <Route path="frontoffice/sales/proposal"    element={<ProposalPage />} />
-          <Route path="frontoffice/sales/performance" element={<PerformancePage />} />
-          <Route path="frontoffice/sales/meeting"     element={<MeetingPage />} />
+          <Route path="frontoffice/sales/performance"       element={<PerformancePage />} />
+          <Route path="frontoffice/sales/performance-entry" element={<PerformanceEntryPage />} />
+          <Route path="frontoffice/sales/meeting"            element={<MeetingPage />} />
           <Route path="frontoffice/marketing" element={<MarketingPage />} />
           <Route
             path="frontoffice/marketing/copywriting"
@@ -161,6 +167,9 @@ function App() {
           <Route path="rnd/dev" element={<DevPage />} />
           <Route path="rnd/qa" element={<QAPage />} />
           <Route path="rnd/design" element={<DesignPage />} />
+
+          {/* 동적 카테고리 — 위의 고정 경로보다 뒤에 두어 /backoffice/hr 등과 충돌하지 않게 함 */}
+          <Route path=":categoryId" element={<CategoryPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

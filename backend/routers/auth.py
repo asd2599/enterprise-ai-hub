@@ -10,6 +10,11 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from database import get_connection
+from services.HR.issued_employee_id_service import (
+    assert_issued_and_unused,
+    mark_employee_id_used,
+    normalize_employee_id,
+)
 
 router = APIRouter()
 
@@ -53,7 +58,7 @@ class UpdateProfileRequest(BaseModel):
 
 @router.get("/profile/{employee_id}")
 def get_profile(employee_id: str):
-    employee_id = employee_id.strip()
+    employee_id = normalize_employee_id(employee_id)
 
     if not employee_id:
         raise HTTPException(status_code=400, detail="사번이 비어 있습니다.")
@@ -102,7 +107,7 @@ def get_profile(employee_id: str):
 
 @router.post("/register", status_code=201)
 def register_employee(body: RegisterEmployeeRequest):
-    employee_id = body.employee_id.strip()
+    employee_id = normalize_employee_id(body.employee_id)
     name = body.name.strip()
     email = body.email.strip().lower()
     password = body.password
@@ -113,6 +118,8 @@ def register_employee(body: RegisterEmployeeRequest):
         raise HTTPException(status_code=400, detail="필수 회원가입 정보가 비어 있습니다.")
 
     conn = get_connection()
+    prev_autocommit = conn.autocommit
+    conn.autocommit = False
     cur = conn.cursor()
 
     try:
@@ -129,6 +136,8 @@ def register_employee(body: RegisterEmployeeRequest):
             if duplicated[0] == employee_id:
                 raise HTTPException(status_code=409, detail="이미 사용 중인 사번입니다.")
             raise HTTPException(status_code=409, detail="이미 사용 중인 이메일입니다.")
+
+        assert_issued_and_unused(cur, employee_id)
 
         cur.execute(
             """
@@ -149,11 +158,16 @@ def register_employee(body: RegisterEmployeeRequest):
             ),
         )
         row = cur.fetchone()
+        mark_employee_id_used(cur, employee_id)
+        conn.commit()
     except HTTPException:
+        conn.rollback()
         raise
     except Exception as exc:
+        conn.rollback()
         raise HTTPException(status_code=500, detail=f"회원가입 처리 실패: {str(exc)}")
     finally:
+        conn.autocommit = prev_autocommit
         cur.close()
         conn.close()
 
@@ -167,7 +181,7 @@ def register_employee(body: RegisterEmployeeRequest):
 
 @router.put("/profile")
 def update_profile(body: UpdateProfileRequest):
-    employee_id = body.employee_id.strip()
+    employee_id = normalize_employee_id(body.employee_id)
     name = body.name.strip()
     email = body.email.strip().lower()
     phone_number = body.phone_number.strip()
@@ -177,6 +191,8 @@ def update_profile(body: UpdateProfileRequest):
         raise HTTPException(status_code=400, detail="이름, 이메일, 전화번호는 필수입니다.")
 
     conn = get_connection()
+    prev_autocommit = conn.autocommit
+    conn.autocommit = False
     cur = conn.cursor()
 
     try:
@@ -244,11 +260,15 @@ def update_profile(body: UpdateProfileRequest):
         row = cur.fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="수정할 계정을 찾을 수 없습니다.")
+        conn.commit()
     except HTTPException:
+        conn.rollback()
         raise
     except Exception as exc:
+        conn.rollback()
         raise HTTPException(status_code=500, detail=f"내 정보 수정 실패: {str(exc)}")
     finally:
+        conn.autocommit = prev_autocommit
         cur.close()
         conn.close()
 
@@ -273,7 +293,7 @@ def update_profile(body: UpdateProfileRequest):
 
 @router.post("/login")
 def login_employee(body: LoginRequest):
-    employee_id = body.employee_id.strip()
+    employee_id = normalize_employee_id(body.employee_id)
     password = body.password
 
     if not employee_id or not password:
@@ -303,13 +323,11 @@ def login_employee(body: LoginRequest):
 
         is_verified = row[6]
         is_active = row[7]
-        department = row[4]
-        position = row[5]
 
+        # 비활성화된 승인 계정은 로그인 차단
         if is_verified and not is_active:
             raise HTTPException(status_code=403, detail="비활성화된 계정입니다.")
-        if is_verified and (not department or not position):
-            raise HTTPException(status_code=403, detail="부서 또는 직급이 아직 배정되지 않았습니다.")
+        # 부서/직급 미배정은 차단하지 않음 — 프론트엔드에서 안내 메시지로 처리
     except HTTPException:
         raise
     except Exception as exc:
@@ -319,12 +337,16 @@ def login_employee(body: LoginRequest):
         conn.close()
 
     birth_date = row[8]
+    department = row[4]
+    position = row[5]
     approval_status = "approved" if row[6] else "pending_approval"
-    message = (
-        f"{row[1]}님, 로그인되었습니다. 현재 인사팀 승인 대기 상태입니다."
-        if approval_status == "pending_approval"
-        else f"{row[1]}님, 로그인되었습니다."
-    )
+
+    if approval_status == "pending_approval":
+        message = f"{row[1]}님, 로그인되었습니다. 현재 인사팀 승인 대기 상태입니다."
+    elif not department or not position:
+        message = f"{row[1]}님, 로그인되었습니다. 부서/직급이 아직 배정되지 않았습니다."
+    else:
+        message = f"{row[1]}님, 로그인되었습니다."
 
     return {
         "employee": {

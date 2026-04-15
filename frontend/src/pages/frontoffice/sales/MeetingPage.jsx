@@ -1,7 +1,19 @@
 // 고객 미팅 요약 페이지 — 메모/녹취 텍스트 → 구조화 요약 + CRM 초안
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Breadcrumb from '../../../components/layout/Breadcrumb'
-import { summarizeMeeting } from '../../../api/sales'
+import {
+  listCrmOpportunities,
+  saveCrmOpportunity,
+  summarizeMeeting,
+  transcribeMeetingAudio,
+} from '../../../api/sales'
+import { getAuthSession } from '../../../api/auth'
+
+// Whisper API 제한 기준
+const AUDIO_MAX_MB = 25
+const AUDIO_EXTS = ['mp3', 'mp4', 'm4a', 'wav', 'webm', 'ogg', 'mpeg', 'mpga']
+
+const STAGE_OPTIONS = ['리드 발굴', '니즈 분석', '제안서 발송', '협상 중', '계약 완료']
 
 function Spinner() {
   return (
@@ -58,6 +70,141 @@ export default function MeetingPage() {
   const [error,     setError]     = useState(null)
   const [result,    setResult]    = useState(null)
   const [activeTab, setActiveTab] = useState('summary')
+
+  // STT 상태
+  const [sttLoading, setSttLoading] = useState(false)
+  const [sttError,   setSttError]   = useState(null)
+  const [audioName,  setAudioName]  = useState('')
+
+  // CRM 편집/저장 상태
+  const [crmForm,        setCrmForm]        = useState(null)
+  const [crmSaving,      setCrmSaving]      = useState(false)
+  const [crmError,       setCrmError]       = useState(null)
+  const [crmSavedId,     setCrmSavedId]     = useState(null)
+
+  // CRM 목록 상태 (A+B안: 스코프 토글 + 검색 + 페이지네이션)
+  const [crmRecentItems, setCrmRecentItems] = useState([])
+  const [crmTotal,       setCrmTotal]       = useState(0)
+  const [crmListError,   setCrmListError]   = useState(null)
+  const [crmListLoading, setCrmListLoading] = useState(false)
+  // 로그인 상태면 '내 저장'이 기본, 비로그인 시엔 '팀 전체'로 자동 전환
+  const [crmScope,       setCrmScope]       = useState(
+    () => (getAuthSession()?.employee?.employee_id ? 'mine' : 'team')
+  ) // 'mine' | 'team'
+  const [crmSearchInput, setCrmSearchInput] = useState('')     // 입력 중 값
+  const [crmSearch,      setCrmSearch]      = useState('')     // 확정된 검색어
+  const [crmLimit,       setCrmLimit]       = useState(10)
+
+  // 현재 로그인한 사원 정보 (세션 기반)
+  const authSession = getAuthSession()
+  const currentEmployeeId   = authSession?.employee?.employee_id || ''
+  const currentEmployeeName = authSession?.employee?.name || ''
+
+  // 미팅 요약 결과가 바뀌면 CRM 폼을 초안으로 초기화
+  useEffect(() => {
+    if (result?.crm_draft) {
+      setCrmForm({
+        opportunity_name: result.crm_draft.opportunity_name || '',
+        stage:            STAGE_OPTIONS.includes(result.crm_draft.stage)
+          ? result.crm_draft.stage
+          : '니즈 분석',
+        next_step:        result.crm_draft.next_step || '',
+        contact_role:     result.crm_draft.contact_role || '',
+        description:      result.crm_draft.description || '',
+      })
+      setCrmSavedId(null)
+      setCrmError(null)
+    } else {
+      setCrmForm(null)
+    }
+  }, [result])
+
+  // 스코프/검색어/limit 변경 시 자동 재조회
+  useEffect(() => {
+    refreshCrmList()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [crmScope, crmSearch, crmLimit])
+
+  async function refreshCrmList() {
+    setCrmListLoading(true)
+    try {
+      const data = await listCrmOpportunities({
+        ownerId: crmScope === 'mine' ? currentEmployeeId : '',
+        search:  crmSearch,
+        offset:  0,
+        limit:   crmLimit,
+      })
+      setCrmRecentItems(data.items || [])
+      setCrmTotal(data.total || 0)
+      setCrmListError(null)
+    } catch (e) {
+      setCrmListError(e.message)
+    } finally {
+      setCrmListLoading(false)
+    }
+  }
+
+  async function handleCrmSave() {
+    if (!crmForm) return
+    if (!crmForm.opportunity_name.trim()) {
+      setCrmError('영업 기회명을 입력해 주세요.')
+      return
+    }
+    setCrmSaving(true)
+    setCrmError(null)
+    try {
+      const saved = await saveCrmOpportunity({
+        company_name:     companyName,
+        meeting_date:     meetingDate,
+        opportunity_name: crmForm.opportunity_name,
+        stage:            crmForm.stage,
+        next_step:        crmForm.next_step,
+        contact_role:     crmForm.contact_role,
+        description:      crmForm.description,
+        owner_id:         currentEmployeeId,
+        owner_name:       currentEmployeeName,
+      })
+      setCrmSavedId(saved.id)
+      refreshCrmList()
+    } catch (e) {
+      setCrmError(e.message)
+    } finally {
+      setCrmSaving(false)
+    }
+  }
+
+  async function handleAudioUpload(e) {
+    const file = e.target.files?.[0]
+    // 같은 파일을 다시 선택할 수 있도록 input 초기화
+    e.target.value = ''
+    if (!file) return
+
+    // 확장자 검증
+    const ext = file.name.split('.').pop()?.toLowerCase()
+    if (!ext || !AUDIO_EXTS.includes(ext)) {
+      setSttError(`지원하지 않는 파일 형식입니다. (${AUDIO_EXTS.join(', ')})`)
+      return
+    }
+    // 크기 검증
+    if (file.size > AUDIO_MAX_MB * 1024 * 1024) {
+      setSttError(`파일 크기는 최대 ${AUDIO_MAX_MB}MB까지 가능합니다.`)
+      return
+    }
+
+    setSttLoading(true)
+    setSttError(null)
+    setAudioName(file.name)
+    try {
+      const data = await transcribeMeetingAudio(file)
+      // 기존 메모에 이어붙이기 (빈 경우 바로 채움)
+      setMeetingNotes(prev => (prev.trim() ? `${prev}\n\n${data.text}` : data.text))
+    } catch (err) {
+      setSttError(err.message)
+      setAudioName('')
+    } finally {
+      setSttLoading(false)
+    }
+  }
 
   async function handleSummarize() {
     if (!companyName.trim() || !meetingNotes.trim()) return
@@ -145,10 +292,62 @@ export default function MeetingPage() {
           </div>
         </div>
 
+        {/* 녹취 파일 업로드 (선택) */}
+        <div className="mb-4">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+            녹취 파일 업로드 <span className="text-gray-400">(선택 · Whisper 자동 변환)</span>
+          </label>
+          <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/40 p-4">
+            <div className="flex items-center gap-3 flex-wrap">
+              <label
+                htmlFor="meeting-audio-upload"
+                className={`inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl text-sm font-semibold transition-colors cursor-pointer ${
+                  sttLoading
+                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+                    : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-amber-400 hover:text-amber-600 dark:hover:text-amber-400'
+                }`}
+              >
+                {sttLoading ? (
+                  <><Spinner />변환 중...</>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+                        d="M19 11a7 7 0 01-14 0m7 7v4m-4 0h8m-4-8a3 3 0 01-3-3V6a3 3 0 016 0v5a3 3 0 01-3 3z" />
+                    </svg>
+                    파일 선택
+                  </>
+                )}
+              </label>
+              <input
+                id="meeting-audio-upload"
+                type="file"
+                accept="audio/*,.mp3,.m4a,.wav,.webm,.ogg,.mp4"
+                onChange={handleAudioUpload}
+                disabled={sttLoading}
+                className="hidden"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 flex-1 min-w-0">
+                {audioName ? (
+                  <span className="truncate block" title={audioName}>
+                    {sttLoading ? '변환 중: ' : '변환 완료: '}<span className="font-medium text-gray-700 dark:text-gray-200">{audioName}</span>
+                  </span>
+                ) : (
+                  <>mp3 · m4a · wav · webm · ogg · mp4 지원 · 최대 {AUDIO_MAX_MB}MB</>
+                )}
+              </p>
+            </div>
+            {sttError && (
+              <p className="text-xs text-red-600 dark:text-red-400 mt-2">{sttError}</p>
+            )}
+          </div>
+        </div>
+
         {/* 미팅 내용 */}
         <div>
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
             미팅 내용 / 메모 <span className="text-red-500">*</span>
+            <span className="text-gray-400 ml-1">(녹취 변환 결과 자동 채움)</span>
           </label>
           <textarea
             value={meetingNotes}
@@ -337,42 +536,114 @@ export default function MeetingPage() {
                 </div>
               )}
 
-              {/* CRM 초안 */}
-              {activeTab === 'crm' && result.crm_draft && (
+              {/* CRM 초안 — 편집 가능 + 원클릭 반영 */}
+              {activeTab === 'crm' && crmForm && (
                 <div className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">CRM 입력 초안</span>
+                  <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
+                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      CRM 입력 초안 <span className="text-gray-400 normal-case">· 검토 후 원클릭 반영</span>
+                    </span>
                     <CopyBtn
-                      text={`영업 기회명: ${result.crm_draft.opportunity_name}\n단계: ${result.crm_draft.stage}\n다음 단계: ${result.crm_draft.next_step}\n담당자 역할: ${result.crm_draft.contact_role}\n\n${result.crm_draft.description}`}
+                      text={`영업 기회명: ${crmForm.opportunity_name}\n단계: ${crmForm.stage}\n다음 단계: ${crmForm.next_step}\n담당자 역할: ${crmForm.contact_role}\n\n${crmForm.description}`}
                       label="전체 복사"
                       className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
                     />
                   </div>
 
-                  <div className="rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-                    {[
-                      { label: '영업 기회명', value: result.crm_draft.opportunity_name },
-                      { label: '현재 단계',   value: result.crm_draft.stage },
-                      { label: '다음 단계',   value: result.crm_draft.next_step },
-                      { label: '담당자 역할', value: result.crm_draft.contact_role || '—' },
-                    ].map((row, i) => (
-                      <div key={i} className="flex border-b border-gray-100 dark:border-gray-700 last:border-0">
-                        <div className="w-28 shrink-0 bg-gray-50 dark:bg-gray-800/50 px-4 py-3">
-                          <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{row.label}</p>
-                        </div>
-                        <div className="flex-1 px-4 py-3">
-                          <p className="text-sm text-gray-800 dark:text-gray-200">{row.value}</p>
-                        </div>
-                      </div>
-                    ))}
-                    <div className="border-t border-gray-100 dark:border-gray-700">
-                      <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800/50">
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">미팅 요약 (설명란)</p>
-                      </div>
-                      <div className="px-4 py-3">
-                        <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">{result.crm_draft.description}</p>
-                      </div>
+                  {/* 영업 기회명 */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">영업 기회명</label>
+                    <input
+                      type="text"
+                      value={crmForm.opportunity_name}
+                      onChange={e => setCrmForm({ ...crmForm, opportunity_name: e.target.value })}
+                      className="w-full text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-2.5 min-h-[44px] focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                  </div>
+
+                  {/* 단계 */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">현재 단계</label>
+                    <div className="flex flex-wrap gap-2">
+                      {STAGE_OPTIONS.map(stage => (
+                        <button
+                          key={stage}
+                          onClick={() => setCrmForm({ ...crmForm, stage })}
+                          className={`min-h-[36px] px-3 rounded-full text-xs font-medium border transition-colors ${
+                            crmForm.stage === stage
+                              ? 'bg-amber-500 border-amber-500 text-white'
+                              : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-amber-400'
+                          }`}
+                        >
+                          {stage}
+                        </button>
+                      ))}
                     </div>
+                  </div>
+
+                  {/* 다음 단계 / 담당자 역할 */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">다음 단계</label>
+                      <input
+                        type="text"
+                        value={crmForm.next_step}
+                        onChange={e => setCrmForm({ ...crmForm, next_step: e.target.value })}
+                        className="w-full text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-2.5 min-h-[44px] focus:outline-none focus:ring-2 focus:ring-amber-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">담당자 역할</label>
+                      <input
+                        type="text"
+                        value={crmForm.contact_role}
+                        onChange={e => setCrmForm({ ...crmForm, contact_role: e.target.value })}
+                        placeholder="예) 구매팀장"
+                        className="w-full text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-2.5 min-h-[44px] focus:outline-none focus:ring-2 focus:ring-amber-400"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 설명 */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">미팅 요약 (설명란)</label>
+                    <textarea
+                      value={crmForm.description}
+                      onChange={e => setCrmForm({ ...crmForm, description: e.target.value })}
+                      rows={4}
+                      className="w-full text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                  </div>
+
+                  {/* 저장 버튼 / 결과 피드백 */}
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={handleCrmSave}
+                      disabled={crmSaving || !crmForm.opportunity_name.trim()}
+                      className="w-full min-h-[44px] rounded-xl bg-amber-500 hover:bg-amber-600
+                        disabled:bg-gray-300 dark:disabled:bg-gray-700
+                        text-white text-sm font-semibold transition-colors
+                        flex items-center justify-center gap-2"
+                    >
+                      {crmSaving ? (
+                        <><Spinner />CRM 반영 중...</>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          CRM에 원클릭 반영
+                        </>
+                      )}
+                    </button>
+                    {crmError && (
+                      <p className="text-xs text-red-600 dark:text-red-400">{crmError}</p>
+                    )}
+                    {crmSavedId && !crmError && (
+                      <p className="text-xs text-green-600 dark:text-green-400">
+                        ✓ CRM에 반영되었습니다 (ID: {crmSavedId})
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -380,6 +651,150 @@ export default function MeetingPage() {
           </div>
         </div>
       )}
+
+      {/* CRM 반영 내역 (mock) — 내 저장 / 팀 전체 · 검색 · 더 보기 */}
+      <div className="mt-8 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="px-5 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p className="text-sm font-semibold text-gray-800 dark:text-white">CRM 반영 내역</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">mock CRM 저장소에 원클릭 반영된 영업 기회</p>
+            </div>
+            <button
+              onClick={refreshCrmList}
+              disabled={crmListLoading}
+              className="text-xs min-h-[32px] px-3 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-amber-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors disabled:opacity-50"
+            >
+              {crmListLoading ? '불러오는 중…' : '새로고침'}
+            </button>
+          </div>
+
+          {/* 스코프 토글 + 검색 */}
+          <div className="mt-3 flex items-center gap-2 flex-wrap">
+            {/* 스코프 세그먼트 */}
+            <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 overflow-hidden">
+              <button
+                onClick={() => setCrmScope('mine')}
+                disabled={!currentEmployeeId}
+                title={!currentEmployeeId ? '로그인 후 사용할 수 있습니다.' : ''}
+                className={`text-xs min-h-[32px] px-3 font-medium transition-colors ${
+                  crmScope === 'mine'
+                    ? 'bg-amber-500 text-white'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                } disabled:opacity-40 disabled:cursor-not-allowed`}
+              >
+                내 저장
+              </button>
+              <button
+                onClick={() => setCrmScope('team')}
+                className={`text-xs min-h-[32px] px-3 font-medium transition-colors border-l border-gray-200 dark:border-gray-600 ${
+                  crmScope === 'team'
+                    ? 'bg-amber-500 text-white'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                팀 전체
+              </button>
+            </div>
+
+            {/* 검색창 */}
+            <form
+              onSubmit={e => { e.preventDefault(); setCrmSearch(crmSearchInput.trim()) }}
+              className="flex items-center gap-2 flex-1 min-w-[180px]"
+            >
+              <input
+                type="text"
+                value={crmSearchInput}
+                onChange={e => setCrmSearchInput(e.target.value)}
+                placeholder="고객사·영업 기회명·설명 검색"
+                className="flex-1 min-w-0 text-xs rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 min-h-[32px] focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+              <button
+                type="submit"
+                className="text-xs min-h-[32px] px-3 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold"
+              >
+                검색
+              </button>
+              {crmSearch && (
+                <button
+                  type="button"
+                  onClick={() => { setCrmSearchInput(''); setCrmSearch('') }}
+                  className="text-xs min-h-[32px] px-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                >
+                  ✕
+                </button>
+              )}
+            </form>
+          </div>
+
+          {/* 요약 라인 */}
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            {crmScope === 'mine'
+              ? (currentEmployeeId
+                  ? <>내 저장 · 총 <span className="font-semibold text-gray-700 dark:text-gray-200">{crmTotal}건</span></>
+                  : '로그인 후 내 저장 내역을 확인할 수 있습니다.')
+              : <>팀 전체 · 총 <span className="font-semibold text-gray-700 dark:text-gray-200">{crmTotal}건</span></>
+            }
+            {crmSearch && <> · 검색 "{crmSearch}"</>}
+          </p>
+        </div>
+
+        <div className="p-5">
+          {crmListError && (
+            <p className="text-sm text-red-600 dark:text-red-400">{crmListError}</p>
+          )}
+          {!crmListError && !crmListLoading && crmRecentItems.length === 0 && (
+            <p className="text-sm text-gray-400 text-center py-6">
+              {crmSearch ? '검색 조건에 해당하는 항목이 없습니다.' : '아직 저장된 영업 기회가 없습니다.'}
+            </p>
+          )}
+          {crmRecentItems.length > 0 && (
+            <ul className="flex flex-col gap-2">
+              {crmRecentItems.map(item => {
+                const isMine = item.owner_id && item.owner_id === currentEmployeeId
+                return (
+                  <li key={item.id} className={`flex items-start justify-between gap-3 p-3 rounded-lg border ${
+                    isMine
+                      ? 'border-amber-200 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/10'
+                      : 'border-gray-100 dark:border-gray-700'
+                  }`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="text-sm font-semibold text-gray-800 dark:text-white truncate">{item.opportunity_name}</span>
+                        {item.stage && (
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STAGE_COLOR[item.stage] ?? 'bg-gray-100 text-gray-600'}`}>
+                            {item.stage}
+                          </span>
+                        )}
+                        {isMine && (
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-500 text-white">내 저장</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {item.company_name}
+                        {item.meeting_date && <> · 미팅 {item.meeting_date}</>}
+                        {item.owner_name && <> · 담당 {item.owner_name}</>}
+                        {item.next_step && <> · 다음: {item.next_step}</>}
+                      </p>
+                    </div>
+                    <span className="text-xs text-gray-400 shrink-0">{item.created_at?.replace('T', ' ').slice(0, 16)}</span>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+
+          {/* 더 보기 */}
+          {crmRecentItems.length > 0 && crmRecentItems.length < crmTotal && (
+            <button
+              onClick={() => setCrmLimit(l => l + 10)}
+              className="mt-4 w-full min-h-[36px] text-xs rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-amber-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+            >
+              더 보기 ({crmRecentItems.length} / {crmTotal})
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

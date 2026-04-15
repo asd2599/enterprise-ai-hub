@@ -1,12 +1,10 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import Breadcrumb from '../../../components/layout/Breadcrumb';
-import { CATEGORIES } from '../../../data/departments';
+import { DEPT_LABEL_OPTIONS } from '../../../data/departments';
 import { getEmployees, updateEmployeeDepartment } from '../../../api/hr';
 
-const DEPARTMENT_OPTIONS = CATEGORIES.flatMap((category) =>
-  category.departments.map((department) => department.label),
-);
+const DEPARTMENT_OPTIONS = DEPT_LABEL_OPTIONS;
 
 function getPositionPriority(position) {
   return String(position || '').includes('팀장') ? 0 : 1;
@@ -295,7 +293,7 @@ export default function Departments() {
                       colSpan={5}
                       className="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400"
                     >
-                      사원 데이터를 불러오는 중입니다...
+                      사원 데이터를 불러오는 중입니다 ...
                     </td>
                   </tr>
                 ) : null}
@@ -306,7 +304,7 @@ export default function Departments() {
                       colSpan={5}
                       className="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400"
                     >
-                      표시할 승인 완료 사원 데이터가 없습니다.
+                      표시할 데이터가 없습니다.
                     </td>
                   </tr>
                 ) : null}
@@ -368,7 +366,7 @@ export default function Departments() {
                                 className="min-w-[56px] rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
                               >
                                 {updatingId === employee.employee_id
-                                  ? '. . .'
+                                  ? '· · ·'
                                   : '저장'}
                               </button>
                             </div>
@@ -382,7 +380,7 @@ export default function Departments() {
                                   변경 사유
                                 </label>
                                 <textarea
-                                  rows={2}
+                                  rows={1}
                                   value={
                                     changeReasonDrafts[employee.employee_id] ??
                                     ''

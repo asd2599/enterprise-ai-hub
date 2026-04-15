@@ -1,58 +1,59 @@
-import { useMemo, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { loginEmployee, saveAuthSession } from '../../api/auth'
+import { useMemo, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { loginEmployee, saveAuthSession } from '../../api/auth';
 
 const FIELD_CLASSNAME =
-  'w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 placeholder:text-gray-400'
+  'w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 placeholder:text-gray-400';
 
 export default function Login() {
-  const navigate = useNavigate()
-  const location = useLocation()
+  const navigate = useNavigate();
+  const location = useLocation();
   const [form, setForm] = useState({
     employee_id: location.state?.registeredEmployeeId || '',
     password: '',
-  })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState(
     location.state?.message || '',
-  )
+  );
 
   const isDisabled = useMemo(
     () => !form.employee_id.trim() || !form.password.trim() || loading,
     [form, loading],
-  )
+  );
 
   function handleChange(event) {
-    const { name, value } = event.target
-    setForm((prev) => ({ ...prev, [name]: value }))
+    const { name, value } = event.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
   }
 
   async function handleSubmit(event) {
-    event.preventDefault()
-    setLoading(true)
-    setError('')
-    setSuccessMessage('')
+    event.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccessMessage('');
 
     try {
       const data = await loginEmployee({
         employee_id: form.employee_id.trim(),
         password: form.password,
-      })
-      saveAuthSession(data)
+      });
+      saveAuthSession(data);
 
       const message =
-        data.message || `${form.employee_id.trim()} 계정으로 로그인 요청을 보냈습니다.`
+        data.message ||
+        `${form.employee_id.trim()} 계정으로 로그인 요청을 보냈습니다.`;
 
-      setSuccessMessage(message)
+      setSuccessMessage(message);
 
       if (data.redirectTo) {
-        navigate(data.redirectTo)
+        navigate(data.redirectTo);
       }
     } catch (submitError) {
-      setError(submitError.message || '로그인 중 오류가 발생했습니다.')
+      setError(submitError.message || '로그인 중 오류가 발생했습니다.');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -67,9 +68,9 @@ export default function Login() {
             사번 기반 사내 로그인
           </h1>
           <p className="mt-4 max-w-xl text-sm leading-6 text-blue-50">
-            `info_employees` 테이블의 기본 로그인 키인 사번(`employee_id`)과 비밀번호로
-            접근하는 화면입니다. 승인 대기 중인 계정도 페이지에 들어갈 수 있고,
-            승인 완료 후 부서와 직급이 확정됩니다.
+            `info_employees` 테이블의 기본 로그인 키인 사번(`employee_id`)과
+            비밀번호로 접근하는 화면입니다. 승인 대기 중인 계정도 페이지에
+            들어갈 수 있고, 승인 완료 후 부서와 직급이 확정됩니다.
           </p>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -122,7 +123,7 @@ export default function Login() {
                 type="text"
                 value={form.employee_id}
                 onChange={handleChange}
-                placeholder="예: EMP-2026-001"
+                placeholder="예: BHR26-00047"
                 className={FIELD_CLASSNAME}
               />
             </label>
@@ -158,7 +159,7 @@ export default function Login() {
               disabled={isDisabled}
               className="flex min-h-[48px] w-full items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
-              {loading ? '로그인 처리 중...' : '로그인'}
+              {loading ? '로그인 처리 중 ...' : '로그인'}
             </button>
           </form>
 
@@ -173,5 +174,5 @@ export default function Login() {
         </section>
       </div>
     </div>
-  )
+  );
 }
