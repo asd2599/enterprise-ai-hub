@@ -72,6 +72,43 @@ def build_period_key(period_type: str, year: int, value: int = 0) -> dict:
     }
 
 
+def previous_period_key(period_key: str) -> str | None:
+    """
+    주어진 period_key의 직전 기간 key를 반환합니다.
+    - 'YYYY-MM'  → 이전 월 (연 경계 처리)
+    - 'YYYY-QN'  → 이전 분기 (연 경계 처리)
+    - 'YYYY-FY'  → 직전 연도
+    파싱 실패 시 None.
+    """
+    if not period_key:
+        return None
+
+    try:
+        # 연간
+        if period_key.endswith("-FY"):
+            year = int(period_key[:4])
+            return f"{year - 1}-FY"
+
+        # 분기
+        if "-Q" in period_key:
+            year_str, q_str = period_key.split("-Q")
+            year = int(year_str)
+            q = int(q_str)
+            if q <= 1:
+                return f"{year - 1}-Q4"
+            return f"{year}-Q{q - 1}"
+
+        # 월
+        year_str, month_str = period_key.split("-")
+        year = int(year_str)
+        month = int(month_str)
+        if month <= 1:
+            return f"{year - 1}-12"
+        return f"{year}-{month - 1:02d}"
+    except (ValueError, IndexError):
+        return None
+
+
 # ────────────────────────────────────────────────────────────
 # 등록 (upsert)
 # ────────────────────────────────────────────────────────────

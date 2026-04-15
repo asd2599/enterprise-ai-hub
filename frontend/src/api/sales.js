@@ -33,6 +33,46 @@ export async function generateProposal(params) {
 }
 
 /**
+ * 성공 사례 문서 목록 조회 (업종 필터)
+ * @param {string} [industry] — '제조업' | '유통·서비스' | 'IT'
+ * @returns {{ items: Array }}
+ */
+export async function listProposalDocuments(industry = '') {
+  const qs = industry ? `?industry=${encodeURIComponent(industry)}` : ''
+  const res = await fetch(`${BASE_URL}/api/sales/proposal/documents${qs}`)
+  return handleResponse(res)
+}
+
+/**
+ * 성공 사례 문서 업로드 (pdf, docx, hwp, txt)
+ * @param {{ file: File, industry: string, uploader?: { employee_id?, name?, department? } }} params
+ */
+export async function uploadProposalDocument({ file, industry, uploader = {} }) {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('industry', industry)
+  if (uploader.employee_id) formData.append('employee_id', uploader.employee_id)
+  if (uploader.name)        formData.append('uploader_name', uploader.name)
+  if (uploader.department)  formData.append('uploader_department', uploader.department)
+  const res = await fetch(`${BASE_URL}/api/sales/proposal/documents/upload`, {
+    method: 'POST',
+    body: formData,
+  })
+  return handleResponse(res)
+}
+
+/**
+ * 성공 사례 문서 삭제
+ * @param {number} documentId
+ */
+export async function deleteProposalDocument(documentId) {
+  const res = await fetch(`${BASE_URL}/api/sales/proposal/documents/${documentId}`, {
+    method: 'DELETE',
+  })
+  return handleResponse(res)
+}
+
+/**
  * 팀원 목록 조회
  * @param {string} [periodKey] — 특정 기간에 등록된 팀원만 반환
  * @returns {Array<{ id: string, name: string }>}
@@ -65,6 +105,52 @@ export async function analyzePerformance(params) {
     body: JSON.stringify(params),
   })
   return handleResponse(res)
+}
+
+/**
+ * 기간 타입별 최근 N개 기간 지표 추세 (차트용)
+ * @param {'month'|'quarter'|'year'} [periodType]
+ * @param {number} [limit]
+ */
+export async function getPerformanceTrend(periodType = 'month', limit = 6) {
+  const qs = `?period_type=${encodeURIComponent(periodType)}&limit=${limit}`
+  const res = await fetch(`${BASE_URL}/api/sales/performance/trend${qs}`)
+  return handleResponse(res)
+}
+
+/**
+ * 선택 기간 vs 직전 기간(전월·전분기·전년) 비교 지표
+ * @param {string} periodKey
+ * @returns {{ current, previous, previous_key, delta }}
+ */
+export async function comparePerformance(periodKey) {
+  const res = await fetch(`${BASE_URL}/api/sales/performance/compare/${encodeURIComponent(periodKey)}`)
+  return handleResponse(res)
+}
+
+/**
+ * 실적 분석 리포트를 Excel로 다운로드 (브라우저 저장)
+ * @param {string} periodKey
+ * @param {string} [memberId]
+ */
+export async function downloadPerformanceExcel(periodKey, memberId = 'all') {
+  const qs = `?member_id=${encodeURIComponent(memberId)}`
+  const res = await fetch(
+    `${BASE_URL}/api/sales/performance/export/${encodeURIComponent(periodKey)}${qs}`,
+  )
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: '다운로드 실패' }))
+    throw new Error(err.detail || `HTTP ${res.status}`)
+  }
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `sales_report_${periodKey}.xlsx`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
 }
 
 /**

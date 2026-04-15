@@ -20,6 +20,14 @@ const PERIOD_TYPES = [
   { value: 'year',    label: '연간'   },
 ]
 
+// 커스텀 셀렉트 꺽쇠 — 네이티브 화살표 숨기고 오른쪽 14px 안쪽에 SVG 배치
+const SELECT_CHEVRON_STYLE = {
+  backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 8l4 4 4-4'/%3E%3C/svg%3E")`,
+  backgroundRepeat: 'no-repeat',
+  backgroundPosition: 'right 14px center',
+  backgroundSize: '14px 14px',
+}
+
 const DEFAULT_PIPELINE = [
   { stage_order: 1, stage_name: '잠재 고객',   stage_count: 0, stage_amount: 0 },
   { stage_order: 2, stage_name: '니즈 분석',   stage_count: 0, stage_amount: 0 },
@@ -435,7 +443,8 @@ export default function PerformanceEntryPage() {
               <select
                 value={value}
                 onChange={e => setValue(parseInt(e.target.value, 10))}
-                className="w-full text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-2.5 min-h-[44px] focus:outline-none focus:ring-2 focus:ring-amber-400"
+                style={SELECT_CHEVRON_STYLE}
+                className="appearance-none w-full text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white pl-4 pr-10 py-2.5 min-h-[44px] focus:outline-none focus:ring-2 focus:ring-amber-400"
               >
                 {(periodType === 'month' ? [1,2,3,4,5,6,7,8,9,10,11,12] : [1,2,3,4]).map(v => (
                   <option key={v} value={v}>
