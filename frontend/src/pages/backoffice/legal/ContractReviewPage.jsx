@@ -186,13 +186,13 @@ export default function ContractReviewPage() {
       />
 
       {/* 헤더 */}
-      <div className="mt-4 mb-6 rounded-xl border p-5 bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800">
+      <div className="mt-4 mb-6 rounded-xl border p-5 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-violet-600 text-white text-xs font-bold shrink-0">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-blue-600 text-white text-xs font-bold shrink-0">
             검토
           </div>
           <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-violet-600 dark:text-violet-400">
+            <span className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
               Back-Office · 법무/컴플라이언스팀
             </span>
             <h1 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">
@@ -222,8 +222,8 @@ export default function ContractReviewPage() {
           'mb-5 rounded-xl border-2 border-dashed transition-colors cursor-pointer',
           'flex flex-col items-center justify-center gap-3 py-12 px-6 text-center',
           dragging
-            ? 'border-violet-400 bg-violet-50 dark:bg-violet-900/20'
-            : 'border-gray-200 dark:border-gray-700 hover:border-violet-300 dark:hover:border-violet-700 bg-white dark:bg-gray-900',
+            ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+            : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 bg-white dark:bg-gray-900',
         ].join(' ')}
       >
         <input
@@ -233,8 +233,8 @@ export default function ContractReviewPage() {
           className="hidden"
           onChange={e => handleFile(e.target.files[0])}
         />
-        <div className="w-12 h-12 rounded-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center">
-          <svg className="w-6 h-6 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+          <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
               d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
           </svg>
@@ -250,9 +250,9 @@ export default function ContractReviewPage() {
               />
             )}
             <div className="flex items-center gap-2 flex-wrap justify-center">
-              <p className="text-sm font-medium text-violet-700 dark:text-violet-300">{file.name}</p>
+              <p className="text-sm font-medium text-blue-700 dark:text-blue-300">{file.name}</p>
               {isImage && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400 font-medium">
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-medium">
                   Vision AI
                 </span>
               )}
@@ -274,8 +274,8 @@ export default function ContractReviewPage() {
         <button
           onClick={handleReview}
           disabled={!file || loading}
-          className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium bg-violet-600 text-white
-            rounded-lg hover:bg-violet-700 disabled:opacity-50 min-h-[44px]"
+          className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium bg-blue-600 text-white
+            rounded-lg hover:bg-blue-700 disabled:opacity-50 min-h-[44px]"
         >
           {loading ? <><Spinner size={4} /> 분석 중...</> : '⚡ AI 검토 시작'}
         </button>
@@ -333,7 +333,7 @@ export default function ContractReviewPage() {
                 <p className="text-xs text-gray-400 mb-1.5">사내 법령·사규 참조</p>
                 <div className="flex flex-wrap gap-1.5">
                   {result.rag_sources.map(s => (
-                    <span key={s} className="text-xs px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 font-medium">
+                    <span key={s} className="text-xs px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium">
                       {s}
                     </span>
                   ))}

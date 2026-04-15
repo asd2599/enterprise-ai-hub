@@ -56,6 +56,12 @@ import ContractReviewPage from "./pages/backoffice/legal/ContractReviewPage";
 import ContractDraftPage from "./pages/backoffice/legal/ContractDraftPage";
 import LegalChatPage from "./pages/backoffice/legal/LegalChatPage";
 
+// 총무/구매팀 세부 직무
+import ProcurementAgentPage from './pages/backoffice/admin/ProcurementAgentPage';
+import QuoteComparePage     from './pages/backoffice/admin/QuoteComparePage';
+import ProcurementChatPage  from './pages/backoffice/admin/ProcurementChatPage';
+import AssetReportPage      from './pages/backoffice/admin/AssetReportPage';
+
 // Front-Office
 import StrategyPage from "./pages/frontoffice/StrategyPage";
 import SalesPage from "./pages/frontoffice/SalesPage";
@@ -111,6 +117,10 @@ function App() {
           <Route path="backoffice/legal/draft" element={<ContractDraftPage />} />
           <Route path="backoffice/legal/chat" element={<LegalChatPage />} />
           <Route path="backoffice/admin" element={<AdminPage />} />
+          <Route path="backoffice/admin/agent" element={<ProcurementAgentPage />} />
+          <Route path="backoffice/admin/quote" element={<QuoteComparePage />} />
+          <Route path="backoffice/admin/chat"  element={<ProcurementChatPage />} />
+          <Route path="backoffice/admin/asset" element={<AssetReportPage />} />
 
           {/* 재무본부 — 서브 대시보드 + 세부 직무 */}
           <Route path="backoffice/finance" element={<FinancePage />} />
