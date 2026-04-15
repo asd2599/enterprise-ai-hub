@@ -12,6 +12,14 @@ function TreasuryGuard({ children }) {
     employee?.position === '대표이사';
   return hasAccess ? children : <Navigate to="/backoffice/finance" replace />;
 }
+
+// 인사팀 전용 라우터 가드 — 인사(HR)팀 또는 기타(관리자)만 허용
+function HRAdminGuard({ children }) {
+  const session = getAuthSession();
+  const dept = session?.employee?.department || '';
+  const hasAccess = dept === '인사(HR)팀' || dept === '기타(관리자)';
+  return hasAccess ? children : <Navigate to="/backoffice/hr" replace />;
+}
 import AppLayout from './components/layout/AppLayout';
 import DashboardPage from './pages/DashboardPage';
 import CategoryPage from './pages/CategoryPage';
@@ -68,6 +76,9 @@ import VocReportPage from "./pages/frontoffice/CS/VocReportPage";
 import DevPage from './pages/rnd/DevPage';
 import QAPage from './pages/rnd/QAPage';
 import DesignPage from './pages/rnd/DesignPage';
+import LogAnalysis from './pages/rnd/Dev/LogAnalysis';
+import DevDocs from './pages/rnd/Dev/DevDocs';
+import ReleaseNote from './pages/rnd/Dev/ReleaseNote';
 
 function App() {
   return (
@@ -81,34 +92,19 @@ function App() {
 
           {/* Back-Office 부서 */}
           <Route path="backoffice/hr" element={<HRPage />} />
-          <Route path="backoffice/hr/hire-create" element={<HireCreate />} />
           <Route path="backoffice/hr/hire-request" element={<HireRequest />} />
-          <Route path="backoffice/hr/q-generate" element={<QGenerate />} />
-          <Route
-            path="backoffice/hr/regulation-chat"
-            element={<RegulationChat />}
-          />
-          <Route
-            path="backoffice/hr/upload-regulation"
-            element={<UploadRegulation />}
-          />
-          <Route path="backoffice/hr/pay" element={<Pay />} />
-          <Route
-            path="backoffice/hr/humanresources"
-            element={<HumanResources />}
-          />
-          <Route
-            path="backoffice/hr/account-approval"
-            element={<AccountApproval />}
-          />
-          <Route
-            path="backoffice/hr/employee-id-generator"
-            element={<EmployeeIdGenerator />}
-          />
-          <Route path="backoffice/hr/departments" element={<Departments />} />
-          <Route path="backoffice/hr/match" element={<Match />} />
-          <Route path="backoffice/hr/evaluate" element={<Evaluate />} />
-          <Route path="backoffice/hr/auto-manual" element={<AutoManual />} />
+          <Route path="backoffice/hr/regulation-chat" element={<RegulationChat />} />
+          <Route path="backoffice/hr/hire-create" element={<HRAdminGuard><HireCreate /></HRAdminGuard>} />
+          <Route path="backoffice/hr/q-generate" element={<HRAdminGuard><QGenerate /></HRAdminGuard>} />
+          <Route path="backoffice/hr/upload-regulation" element={<HRAdminGuard><UploadRegulation /></HRAdminGuard>} />
+          <Route path="backoffice/hr/pay" element={<HRAdminGuard><Pay /></HRAdminGuard>} />
+          <Route path="backoffice/hr/humanresources" element={<HRAdminGuard><HumanResources /></HRAdminGuard>} />
+          <Route path="backoffice/hr/account-approval" element={<HRAdminGuard><AccountApproval /></HRAdminGuard>} />
+          <Route path="backoffice/hr/employee-id-generator" element={<HRAdminGuard><EmployeeIdGenerator /></HRAdminGuard>} />
+          <Route path="backoffice/hr/departments" element={<HRAdminGuard><Departments /></HRAdminGuard>} />
+          <Route path="backoffice/hr/match" element={<HRAdminGuard><Match /></HRAdminGuard>} />
+          <Route path="backoffice/hr/evaluate" element={<HRAdminGuard><Evaluate /></HRAdminGuard>} />
+          <Route path="backoffice/hr/auto-manual" element={<HRAdminGuard><AutoManual /></HRAdminGuard>} />
           {/* 법무/컴플라이언스팀 — 서브 대시보드 + 세부 직무 */}
           <Route path="backoffice/legal" element={<LegalPage />} />
           <Route path="backoffice/legal/review" element={<ContractReviewPage />} />
@@ -155,6 +151,9 @@ function App() {
           <Route path="frontoffice/cs/voc" element={<VocReportPage />} />
           {/* R&D / Product 부서 */}
           <Route path="rnd/dev" element={<DevPage />} />
+          <Route path="rnd/dev/log-analysis" element={<LogAnalysis />} />
+          <Route path="rnd/dev/dev-docs" element={<DevDocs />} />
+          <Route path="rnd/dev/release-note" element={<ReleaseNote />} />
           <Route path="rnd/qa" element={<QAPage />} />
           <Route path="rnd/design" element={<DesignPage />} />
 

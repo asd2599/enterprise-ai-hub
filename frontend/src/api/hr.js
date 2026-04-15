@@ -45,6 +45,7 @@ export async function approveEmployee(payload) {
   return response.json().catch(() => ({}))
 }
 
+
 export async function updateEmployeeDepartment(employeeId, payload) {
   const response = await apiRequest(
     `${EMPLOYEES_ENDPOINT}/${employeeId}/department`,
