@@ -1,7 +1,11 @@
 // 응답 초안 자동 생성 페이지
 import { useState } from 'react';
 import Breadcrumb from '../../../components/layout/Breadcrumb';
-import { generateResponseDraft, saveInquiry } from '../../../api/cs';
+import {
+  generateResponseDraft,
+  saveInquiry,
+  transcribeInquiryAudio,
+} from '../../../api/cs';
 
 const MAIN_TYPE_COLOR = {
   배송: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',
@@ -83,6 +87,30 @@ export default function ResponseDraftPage() {
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
   // result = { main_type, sub_type, draft, escalation: { needed, reason } }
+
+  // 녹취 STT 상태
+  const [transcribing, setTranscribing] = useState(false);
+  const [transcribedFileName, setTranscribedFileName] = useState('');
+
+  async function handleAudioUpload(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setTranscribing(true);
+    setError(null);
+    try {
+      const data = await transcribeInquiryAudio(file);
+      // 기존 입력이 있으면 줄바꿈 두 개로 이어붙임, 없으면 교체
+      setInquiry((prev) =>
+        prev.trim() ? `${prev.trim()}\n\n${data.text}` : data.text,
+      );
+      setTranscribedFileName(file.name);
+    } catch (err) {
+      setError(`녹취 변환 실패: ${err.message}`);
+    } finally {
+      setTranscribing(false);
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -180,6 +208,79 @@ export default function ResponseDraftPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 입력 폼 */}
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {/* 녹취 파일 업로드 → STT 자동 채움 */}
+          <div className="rounded-xl border border-dashed border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/20 p-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-start gap-2 min-w-0">
+                <svg
+                  className="w-4 h-4 text-amber-500 mt-0.5 shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M19 11a7 7 0 01-14 0m7 7v3m0 0H8m4 0h4m-4-7a3 3 0 01-3-3V5a3 3 0 016 0v6a3 3 0 01-3 3z"
+                  />
+                </svg>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    전화 응대 녹취 업로드
+                  </p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                    Whisper STT로 변환 후 아래 문의 원문에 자동 채움 (mp3·m4a·wav·webm·ogg, 최대 25MB)
+                  </p>
+                  {transcribedFileName && !transcribing && (
+                    <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1 truncate">
+                      ✓ {transcribedFileName} 변환 완료
+                    </p>
+                  )}
+                </div>
+              </div>
+              <label
+                className={[
+                  'inline-flex items-center gap-2 min-h-[40px] px-4 rounded-xl text-xs font-semibold text-white transition-colors cursor-pointer shrink-0',
+                  transcribing
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-amber-500 hover:bg-amber-600',
+                ].join(' ')}
+              >
+                {transcribing ? (
+                  <>
+                    <Spinner />
+                    변환 중...
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="w-3.5 h-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5-5m0 0l5 5m-5-5v12"
+                      />
+                    </svg>
+                    파일 선택
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept="audio/*,.mp3,.m4a,.wav,.webm,.ogg,.mp4"
+                  className="hidden"
+                  onChange={handleAudioUpload}
+                  disabled={transcribing}
+                />
+              </label>
+            </div>
+          </div>
+
           <div>
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
               고객 문의 원문 <span className="text-red-500">*</span>
