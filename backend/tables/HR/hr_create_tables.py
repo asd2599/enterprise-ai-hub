@@ -25,7 +25,6 @@ TABLES = [
             id                      SERIAL          PRIMARY KEY,
             file_name               VARCHAR(255)    NOT NULL,
             file_type               VARCHAR(20)     NOT NULL,
-            file_bytes              BYTEA           NOT NULL,
             text_content            TEXT            NOT NULL,
             text_length             INTEGER         NOT NULL,
             preview                 TEXT,

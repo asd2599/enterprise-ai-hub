@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FaChevronDown, FaChevronUp, FaTrashAlt } from 'react-icons/fa';
+import { FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import { IoEyeOffSharp } from 'react-icons/io5';
 import Breadcrumb from '../../../components/layout/Breadcrumb';
 import {
   getHrNotifications,
@@ -150,9 +151,9 @@ export default function HumanResources() {
               type="button"
               onClick={handleMarkAllAsRead}
               disabled={noticeItems.length === 0 || readingAll}
-              className="rounded-lg border border-blue-200 px-3 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400"
+              className="w-24 rounded-lg border border-blue-200 px-3 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400"
             >
-              {readingAll ? '처리 중...' : '전부 읽음'}
+              {readingAll ? '처리 중 ...' : '전부 읽음'}
             </button>
           </div>
 
@@ -168,7 +169,7 @@ export default function HumanResources() {
             </div>
           ) : noticeItems.length === 0 ? (
             <div className="mt-4 rounded-lg bg-gray-50 px-4 py-10 text-center text-sm text-gray-500 dark:bg-gray-800/60 dark:text-gray-300">
-              현재 표시할 알림이 없습니다.
+              표시할 알림이 없습니다.
             </div>
           ) : (
             <div className="mt-4 space-y-3">
@@ -195,7 +196,7 @@ export default function HumanResources() {
                       className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:bg-white hover:text-gray-700 disabled:cursor-not-allowed disabled:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-gray-100"
                       aria-label="알림 삭제"
                     >
-                      <FaTrashAlt className="h-3.5 w-3.5" />
+                      <IoEyeOffSharp className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </div>

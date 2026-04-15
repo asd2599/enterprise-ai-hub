@@ -7,7 +7,7 @@ import {
   getPendingEmployees,
   rejectEmployee,
 } from '../../../api/hr';
-import { CATEGORIES } from '../../../data/departments';
+import { DEPT_LABEL_OPTIONS } from '../../../data/departments';
 import { FaChevronDown } from 'react-icons/fa';
 import { IoMdRefresh } from 'react-icons/io';
 
@@ -32,13 +32,13 @@ function SuccessBanner({ message }) {
 }
 
 function formatDateTime(value) {
-  if (!value) return '—';
+  if (!value) return '-';
   return String(value).slice(0, 19).replace('T', ' ');
 }
 
 /** 승인 내역 등: 초 없이 `YYYY-MM-DD HH:mm` */
 function formatDateTimeMinute(value) {
-  if (!value) return '—';
+  if (!value) return '-';
   const s = String(value).replace('T', ' ').split('.')[0];
   const head = s.slice(0, 19);
   return head.length >= 16 ? head.slice(0, 16) : head;
@@ -54,13 +54,7 @@ export default function AccountApproval() {
   const [drafts, setDrafts] = useState({});
   const [savingId, setSavingId] = useState('');
   const [rejectingId, setRejectingId] = useState('');
-  const departmentOptions = useMemo(
-    () =>
-      CATEGORIES.flatMap((category) =>
-        category.departments.map((department) => department.label),
-      ),
-    [],
-  );
+  const departmentOptions = DEPT_LABEL_OPTIONS;
 
   const fetchPendingEmployees = useCallback(async () => {
     setLoading(true);
@@ -179,7 +173,7 @@ export default function AccountApproval() {
         return next;
       });
       setSuccessMessage(
-        `${result.name || employeeId} 계정을 승인하고 ${result.department} / ${result.position}으로 배정했습니다.`,
+        `${result.name || employeeId} 계정을 승인하고 ${result.department} | ${result.position}으로 배정했습니다.`,
       );
       fetchDecisionHistory();
     } catch (approveError) {
@@ -386,7 +380,7 @@ export default function AccountApproval() {
                               생년월일
                             </span>
                             <span className="min-w-0 flex-1 truncate text-right text-gray-900 dark:text-white">
-                              {item.birth_date ? item.birth_date : '—'}
+                              {item.birth_date ? item.birth_date : '-'}
                             </span>
                           </div>
                         </div>
@@ -707,7 +701,7 @@ export default function AccountApproval() {
                               : 'text-rose-900 dark:text-rose-200'
                           }`}
                         >
-                          {row.department || '—'}
+                          {row.department || '-'}
                         </td>
                         <td
                           className={`text-left align-middle whitespace-nowrap px-2 py-2 ${
@@ -716,7 +710,7 @@ export default function AccountApproval() {
                               : 'text-rose-900 dark:text-rose-200'
                           }`}
                         >
-                          {row.position || '—'}
+                          {row.position || '-'}
                         </td>
                         <td
                           className={`text-left align-middle max-w-[220px] px-2 py-2 ${
@@ -725,7 +719,7 @@ export default function AccountApproval() {
                               : 'text-rose-800 dark:text-rose-200'
                           }`}
                         >
-                          {isApproved ? '—' : row.reason || '—'}
+                          {isApproved ? '-' : row.reason || '-'}
                         </td>
                       </tr>
                     );

@@ -28,7 +28,7 @@ ISSUE_DEPARTMENT_CODES: dict[str, str] = {
     "RDE": "개발/IT운영팀",
     "RQA": "QA/품질관리팀",
     "RDS": "디자인/UX팀",
-    "XYZ": "기타",
+    "XYZ": "기타(관리자)",
 }
 
 # CCCYY-NNNRR (랜덤 2자리)

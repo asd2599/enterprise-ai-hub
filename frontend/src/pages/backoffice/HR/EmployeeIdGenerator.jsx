@@ -13,6 +13,7 @@ import {
   IoMdClose,
   IoMdRefresh,
 } from 'react-icons/io';
+import { FaTrashCan } from 'react-icons/fa6';
 import { DASHBOARD_ISSUE_CODE_ORDER } from '../../../data/departments';
 
 function formatDt(value) {
@@ -611,10 +612,10 @@ export default function EmployeeIdGenerator() {
                             <button
                               type="button"
                               onClick={() => handleDeleteIssued(row)}
-                              title="미사용 발급만 선택 삭제"
-                              className="text-xs font-semibold text-rose-600 underline-offset-2 hover:text-rose-700 hover:underline dark:text-rose-400 dark:hover:text-rose-300"
+                              aria-label="미사용 사번 삭제"
+                              className="inline-flex items-center justify-center rounded p-1 text-rose-500 transition hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300"
                             >
-                              삭제
+                              <FaTrashCan className="h-3.5 w-3.5" />
                             </button>
                           </div>
                         ) : row.status === 'voided' ? (
