@@ -39,7 +39,7 @@ const TOOL_ICONS = {
 }
 
 function ToolCard({ tool, theme, onClick, availabilityBadge }) {
-  const available = !availabilityBadge || Boolean(tool.path)
+  const available = !tool.disabled && (!availabilityBadge || Boolean(tool.path))
 
   return (
     <button
@@ -140,7 +140,7 @@ function DeptPageLayout({
               tool={tool}
               theme={theme}
               availabilityBadge={availabilityBadge}
-              onClick={tool.path ? () => navigate(tool.path) : undefined}
+              onClick={!tool.disabled && tool.path ? () => navigate(tool.path) : undefined}
             />
           ))}
         </div>

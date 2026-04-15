@@ -85,6 +85,7 @@ import DesignPage from './pages/rnd/DesignPage';
 import LogAnalysis from './pages/rnd/Dev/LogAnalysis';
 import DevDocs from './pages/rnd/Dev/DevDocs';
 import ReleaseNote from './pages/rnd/Dev/ReleaseNote';
+import TechTranslate from './pages/rnd/Dev/TechTranslate';
 
 function App() {
   return (
@@ -164,6 +165,7 @@ function App() {
           <Route path="rnd/dev/log-analysis" element={<LogAnalysis />} />
           <Route path="rnd/dev/dev-docs" element={<DevDocs />} />
           <Route path="rnd/dev/release-note" element={<ReleaseNote />} />
+          <Route path="rnd/dev/tech-translate" element={<TechTranslate />} />
           <Route path="rnd/qa" element={<QAPage />} />
           <Route path="rnd/design" element={<DesignPage />} />
 
