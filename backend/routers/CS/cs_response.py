@@ -4,11 +4,16 @@ CS 응답 초안 라우터 — /api/cs/response/*
 import csv
 import io
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from services.CS.cs_response_service import classify_and_draft
+from services.common.stt_service import (
+    ALLOWED_EXTENSIONS as STT_ALLOWED_EXTENSIONS,
+    MAX_FILE_SIZE as STT_MAX_FILE_SIZE,
+    transcribe_audio,
+)
 from database import get_connection
 
 router = APIRouter()
@@ -34,6 +39,46 @@ class SaveInquiryRequest(BaseModel):
     escalation_needed:  bool = False
     escalation_reason:  str  = ""
     status:             str  = "완료"   # "완료" | "에스컬레이션"
+
+
+# ──────────────────────────────────────────────────────────────
+# POST /api/cs/response/transcribe — 고객 문의 녹취 → 텍스트 변환
+# ──────────────────────────────────────────────────────────────
+@router.post("/transcribe")
+async def transcribe_inquiry_audio(file: UploadFile = File(...)):
+    """
+    고객 문의 녹취 파일(전화 응대·VOC 음성 등)을 텍스트로 변환합니다.
+    변환된 텍스트는 프런트의 '문의 원문' 입력란에 자동 채워집니다.
+
+    Request : multipart/form-data, file: 오디오 파일 (mp3/m4a/wav/webm/ogg/mp4)
+    Response: { text: "변환된 텍스트" }
+    """
+    filename = file.filename or ""
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if ext not in STT_ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"지원하지 않는 파일 형식입니다. ({', '.join(sorted(STT_ALLOWED_EXTENSIONS))})",
+        )
+
+    file_bytes = await file.read()
+    if len(file_bytes) == 0:
+        raise HTTPException(status_code=400, detail="빈 파일은 업로드할 수 없습니다.")
+    if len(file_bytes) > STT_MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"파일 크기는 최대 25MB까지 가능합니다. (현재 {len(file_bytes) // (1024*1024)}MB)",
+        )
+
+    try:
+        text = transcribe_audio(file_bytes, filename)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"음성 변환 실패: {str(e)}")
+
+    if not text or not text.strip():
+        raise HTTPException(status_code=422, detail="변환된 텍스트가 비어 있습니다. 녹음 품질을 확인해 주세요.")
+
+    return {"text": text.strip()}
 
 
 # ──────────────────────────────────────────────────────────────
