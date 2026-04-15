@@ -300,7 +300,7 @@ def update_employee_department(employee_id: str, body: UpdateEmployeeDepartmentR
         conn.close()
 
     create_notification(
-        f"{row[1]}님의 부서를 '{previous_department}'에서 '{row[2]}'으로 변경했습니다. 변경 사유: {reason}",
+        f"{row[1]}님의 부서를 '{previous_department}'에서 '{row[2]}'으로 변경했습니다.  변경 사유: {reason}",
         "부서",
     )
 
@@ -419,7 +419,7 @@ def approve_employee(body: ApproveEmployeeRequest):
         cur.close()
         conn.close()
 
-    create_notification(f"({row[0]}) 계정이 승인되었습니다.", "계정 승인 관리")
+    create_notification(f"[{row[0]}] 계정이 승인되었습니다.", "계정 승인 관리")
 
     return {
         "employee_id": row[0],
@@ -430,5 +430,5 @@ def approve_employee(body: ApproveEmployeeRequest):
         "is_active": row[6],
         "updated_at": str(row[7]),
         "verified_at": str(row[8]) if row[8] is not None else None,
-        "message": "인사팀 승인과 부서/직급 배정이 완료되었습니다.",
+        "message": "인사팀 승인과 부서·직급 배정이 완료되었습니다.",
     }

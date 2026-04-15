@@ -113,8 +113,13 @@ async def upload_regulation(
             },
         )
         if items:
-            file_names = ", ".join(f"'{item['file_name']}'" for item in items)
-            create_notification(f"{file_names} 규정 문서를 업로드했습니다.", "규정 문서 업로드")
+            first_name = items[0]['file_name']
+            extra_count = len(items) - 1
+            if extra_count > 0:
+                upload_msg = f"문서 '{first_name}' 외 {extra_count}건을 업로드했습니다."
+            else:
+                upload_msg = f"문서 '{first_name}'을 업로드했습니다."
+            create_notification(upload_msg, "규정 문서 업로드")
         return {"items": items}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -128,8 +133,8 @@ def delete_regulation(document_id: int):
         result = delete_regulation_document(document_id)
         if result.get("deleted_file_name"):
             create_notification(
-                f"'{result['deleted_file_name']}' 규정 문서를 삭제했습니다.",
-                "규정 문서 업로드",
+                f"'{result['deleted_file_name']}'문서를 삭제했습니다.",
+                "문서 업로드",
             )
         return result
     except ValueError as exc:

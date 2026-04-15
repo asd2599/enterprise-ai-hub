@@ -236,5 +236,11 @@ export const ISSUE_CODE_TO_LABEL = {
       cat.departments.map((d) => [DEPT_ID_TO_ISSUE_CODE[d.id], d.label]),
     ),
   ),
-  XYZ: '기타',
+  XYZ: '기타(관리자)',
 }
+
+/** 계정 승인 / 부서 변경에서 선택 가능한 부서명 목록 (대시보드 순서 + 기타(관리자) 마지막) */
+export const DEPT_LABEL_OPTIONS = [
+  ...CATEGORIES.flatMap((cat) => cat.departments.map((d) => d.label)),
+  ISSUE_CODE_TO_LABEL.XYZ,
+]
