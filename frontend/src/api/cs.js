@@ -26,6 +26,21 @@ export async function generateResponseDraft({ inquiry, order_no = '', tone = 'fo
 }
 
 /**
+ * 고객 문의 녹취 파일을 텍스트로 변환 (Whisper STT)
+ * @param {File} file - 오디오 파일 (mp3, m4a, wav, webm, ogg, mp4 등)
+ * @returns {{ text: string }}
+ */
+export async function transcribeInquiryAudio(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await fetch(`${BASE_URL}/api/cs/response/transcribe`, {
+    method: 'POST',
+    body: formData,
+  })
+  return handleResponse(res)
+}
+
+/**
  * 처리 완료 문의 DB 저장
  * @param {{ inquiry_text, order_no?, tone?, main_type, sub_type,
  *            draft, final_response, escalation_needed, escalation_reason, status }} data

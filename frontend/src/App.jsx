@@ -64,6 +64,7 @@ import AssetReportPage      from './pages/backoffice/admin/AssetReportPage';
 
 // Front-Office
 import StrategyPage from "./pages/frontoffice/StrategyPage";
+import CompetitorResearchPage from "./pages/frontoffice/strategy/CompetitorResearchPage";
 import SalesPage from "./pages/frontoffice/SalesPage";
 import MarketingPage from "./pages/frontoffice/MarketingPage";
 import CopywritingPage from "./pages/frontoffice/Marketing/CopywritingPage";
@@ -141,6 +142,7 @@ function App() {
 
           {/* Front-Office 부서 */}
           <Route path="frontoffice/strategy" element={<StrategyPage />} />
+          <Route path="frontoffice/strategy/competitor" element={<CompetitorResearchPage />} />
           <Route path="frontoffice/sales" element={<SalesPage />} />
           <Route path="frontoffice/sales/proposal"    element={<ProposalPage />} />
           <Route path="frontoffice/sales/performance"       element={<PerformancePage />} />
