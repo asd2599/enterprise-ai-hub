@@ -1,7 +1,13 @@
-// 영업 제안서 자동 생성 페이지 — 업종별 구조 프리셋 + 성공 사례 RAG
-import { useState } from 'react'
+// 영업 제안서 자동 생성 페이지 — 업종별 구조 프리셋 + 성공 사례 벡터 RAG
+import { useEffect, useState } from 'react'
 import Breadcrumb from '../../../components/layout/Breadcrumb'
-import { generateProposal } from '../../../api/sales'
+import {
+  deleteProposalDocument,
+  generateProposal,
+  listProposalDocuments,
+  uploadProposalDocument,
+} from '../../../api/sales'
+import { getAuthSession } from '../../../api/auth'
 
 function Spinner() {
   return (
@@ -71,6 +77,68 @@ export default function ProposalPage() {
   const [result,    setResult]    = useState(null)
   const [activeTab, setActiveTab] = useState('proposal')
 
+  // 성공 사례 문서 RAG 관리 상태
+  const [docs,         setDocs]         = useState([])
+  const [docsLoading,  setDocsLoading]  = useState(false)
+  const [docError,     setDocError]     = useState(null)
+  const [uploading,    setUploading]    = useState(false)
+  const [showDocPanel, setShowDocPanel] = useState(false)
+
+  // 현재 선택된 업종의 문서만 불러오기
+  async function refreshDocs(targetIndustry = industry) {
+    setDocsLoading(true)
+    setDocError(null)
+    try {
+      const data = await listProposalDocuments(targetIndustry)
+      setDocs(data.items || [])
+    } catch (e) {
+      setDocError(e.message)
+    } finally {
+      setDocsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    refreshDocs(industry)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [industry])
+
+  async function handleUpload(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploading(true)
+    setDocError(null)
+    try {
+      const session = getAuthSession()
+      await uploadProposalDocument({
+        file,
+        industry,
+        uploader: {
+          employee_id: session?.employee_id,
+          name:        session?.name,
+          department:  session?.department,
+        },
+      })
+      await refreshDocs(industry)
+    } catch (err) {
+      setDocError(err.message)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  async function handleDeleteDoc(documentId, fileName) {
+    if (!window.confirm(`"${fileName}" 문서를 삭제할까요?`)) return
+    setDocError(null)
+    try {
+      await deleteProposalDocument(documentId)
+      await refreshDocs(industry)
+    } catch (err) {
+      setDocError(err.message)
+    }
+  }
+
   async function handleGenerate() {
     if (!companyName.trim() || !keyNeeds.trim()) return
     setLoading(true)
@@ -121,8 +189,107 @@ export default function ProposalPage() {
           </div>
         </div>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-          고객사 정보와 핵심 니즈를 입력하면 과거 성공 사례를 참고한 맞춤형 제안서 초안을 자동 생성합니다. 작성 시간을 75% 단축합니다.
+          고객사 정보와 핵심 니즈를 입력하면 업로드된 성공 사례 문서를 벡터 검색하여 맞춤형 제안서 초안을 자동 생성합니다.
         </p>
+      </div>
+
+      {/* 성공 사례 문서 RAG 관리 패널 */}
+      <div className="mb-5 rounded-xl border border-gray-200 dark:border-gray-700">
+        <button
+          onClick={() => setShowDocPanel(v => !v)}
+          className="w-full flex items-center justify-between px-5 py-3 min-h-[44px] text-left"
+        >
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                d="M4 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2V7z" />
+            </svg>
+            <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+              성공 사례 문서 관리
+            </span>
+            <span className="text-xs text-gray-400">
+              ({industry} · {docs.length}건)
+            </span>
+          </div>
+          <svg
+            className={`w-4 h-4 text-gray-400 transition-transform ${showDocPanel ? 'rotate-180' : ''}`}
+            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {showDocPanel && (
+          <div className="border-t border-gray-100 dark:border-gray-700 px-5 py-4">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              현재 선택된 업종({industry})의 성공 사례를 업로드하세요. 업로드된 문서는 청크 단위로 임베딩되어
+              제안서 생성 시 벡터 유사도 기반으로 참조됩니다. (pdf, docx, hwp, txt)
+            </p>
+
+            <label className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 text-white text-sm font-semibold cursor-pointer transition-colors">
+              {uploading ? <><Spinner />업로드 중...</> : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5-5m0 0l5 5m-5-5v12" />
+                  </svg>
+                  성공 사례 업로드
+                </>
+              )}
+              <input
+                type="file"
+                accept=".pdf,.docx,.hwp,.txt"
+                className="hidden"
+                onChange={handleUpload}
+                disabled={uploading}
+              />
+            </label>
+
+            {docError && (
+              <div className="mt-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 px-4 py-2">
+                <p className="text-xs text-red-700 dark:text-red-300">{docError}</p>
+              </div>
+            )}
+
+            {/* 문서 목록 */}
+            <div className="mt-4">
+              {docsLoading ? (
+                <div className="flex items-center gap-2 text-xs text-gray-400 py-4">
+                  <Spinner />목록 불러오는 중...
+                </div>
+              ) : docs.length === 0 ? (
+                <p className="text-xs text-gray-400 py-4 text-center">
+                  업로드된 {industry} 성공 사례가 없습니다.
+                </p>
+              ) : (
+                <ul className="flex flex-col gap-2">
+                  {docs.map(doc => (
+                    <li
+                      key={doc.document_id}
+                      className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-gray-100 dark:border-gray-700"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-gray-800 dark:text-gray-200 truncate">
+                          {doc.file_name}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          청크 {doc.chunk_count}개 · {doc.text_length.toLocaleString()}자
+                          {doc.uploaded_by_name ? ` · ${doc.uploaded_by_name}` : ''}
+                          {doc.uploaded_at ? ` · ${doc.uploaded_at}` : ''}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteDoc(doc.document_id, doc.file_name)}
+                        className="min-h-[44px] px-3 text-xs text-red-600 hover:text-red-700 dark:text-red-400"
+                      >
+                        삭제
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 입력 폼 */}
@@ -241,6 +408,16 @@ export default function ProposalPage() {
       {/* 결과 */}
       {result && (
         <div className="flex flex-col gap-5">
+          {/* 참조 문서 (RAG sources) */}
+          {result.sources?.length > 0 && (
+            <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20 px-4 py-3">
+              <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">참조 성공 사례 문서</p>
+              <p className="text-xs text-gray-600 dark:text-gray-300">
+                {result.sources.join(' · ')}
+              </p>
+            </div>
+          )}
+
           {/* 경영진 요약 */}
           <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-5">
             <div className="flex items-start justify-between gap-4">
