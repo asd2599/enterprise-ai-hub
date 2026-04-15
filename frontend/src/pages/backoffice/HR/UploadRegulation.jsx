@@ -69,7 +69,7 @@ export default function UploadRegulation() {
         const data = await getRegulationDocuments();
         setDocuments(data.items || []);
       } catch (fetchError) {
-        setError(fetchError.message || '규정 문서 목록을 불러오지 못했습니다.');
+        setError(fetchError.message || '문서 목록을 불러오지 못했습니다.');
       } finally {
         setLoading(false);
       }
@@ -80,7 +80,7 @@ export default function UploadRegulation() {
 
   async function handleUpload(files) {
     if (!isLoggedIn) {
-      setError('규정 문서를 업로드하려면 먼저 로그인해 주세요.');
+      setError('문서를 업로드하려면 먼저 로그인해 주세요.');
       return;
     }
 
@@ -94,12 +94,18 @@ export default function UploadRegulation() {
         name: session?.employee?.name || '',
         department: session?.employee?.department || '',
       });
-      setDocuments((prev) => [...(uploaded.items || []), ...prev]);
-      setSuccessMessage(
-        `${uploaded.items?.length || 0}개의 규정 문서를 업로드했습니다.`,
-      );
+      const refreshed = await getRegulationDocuments();
+      setDocuments(refreshed.items || []);
+      const uploadedItems = uploaded.items || [];
+      const firstName = uploadedItems[0]?.file_name || '';
+      const extraCount = uploadedItems.length - 1;
+      const uploadMsg =
+        extraCount > 0
+          ? `문서 '${firstName}' 외 ${extraCount}건을 업로드했습니다.`
+          : `문서 '${firstName}'을 업로드했습니다.`;
+      setSuccessMessage(uploadMsg);
     } catch (uploadError) {
-      setError(uploadError.message || '규정 문서 업로드에 실패했습니다.');
+      setError(uploadError.message || '문서 업로드에 실패했습니다.');
     } finally {
       setUploading(false);
     }
@@ -108,7 +114,7 @@ export default function UploadRegulation() {
   async function handleDelete(documentId) {
     if (!documentId || deletingId) return;
 
-    const confirmed = window.confirm('선택한 규정 문서를 삭제하시겠습니까?');
+    const confirmed = window.confirm('선택한 문서를 삭제하시겠습니까?');
     if (!confirmed) return;
 
     setDeletingId(documentId);
@@ -118,9 +124,9 @@ export default function UploadRegulation() {
     try {
       const result = await deleteRegulationDocument(documentId);
       setDocuments(result.items || []);
-      setSuccessMessage(result.message || '규정 문서를 삭제했습니다.');
+      setSuccessMessage(result.message || '문서를 삭제했습니다.');
     } catch (deleteError) {
-      setError(deleteError.message || '규정 문서 삭제에 실패했습니다.');
+      setError(deleteError.message || '문서 삭제에 실패했습니다.');
     } finally {
       setDeletingId(null);
     }
@@ -185,9 +191,9 @@ export default function UploadRegulation() {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading || !isLoggedIn}
-                className="min-h-11 rounded-lg px-4 py-2 text-sm font-medium text-white transition disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-100 bg-blue-600 hover:bg-blue-700"
+                className="min-h-11 w-24 rounded-lg px-4 py-2 text-sm font-medium text-white transition disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-100 bg-blue-600 hover:bg-blue-700"
               >
-                파일 선택
+                {uploading ? '업로드 중' : '파일 선택'}
               </button>
             </div>
             <input
@@ -213,9 +219,6 @@ export default function UploadRegulation() {
               <h2 className="text-base font-semibold text-gray-900 dark:text-white">
                 현재 적용 문서
               </h2>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                업로드된 문서 목록을 확인하고 정렬하거나 삭제할 수 있습니다.
-              </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm text-gray-600 dark:text-gray-300">
@@ -283,7 +286,7 @@ export default function UploadRegulation() {
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       업로드 사용자: {document.uploaded_by_name || '-'}
                       {document.uploaded_by_department
-                        ? ` · ${document.uploaded_by_department}`
+                        ? ` (${document.uploaded_by_department})`
                         : ''}
                     </p>
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -299,7 +302,7 @@ export default function UploadRegulation() {
                     className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-rose-200 px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/30"
                   >
                     {deletingId === document.document_id ? (
-                      '...'
+                      '· · ·'
                     ) : (
                       <FaTrashAlt />
                     )}
