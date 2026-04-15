@@ -60,6 +60,50 @@ export async function askDevQuestion(question) {
   return handleResponse(res)
 }
 
+// ── 기술 용어 번역기 ───────────────────────────────────────────────────────
+
+export async function translateTechText({ text, audience = 'general' }) {
+  const res = await fetch(`${BASE_URL}/api/dev/translate/translate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, audience }),
+  })
+  return handleResponse(res)
+}
+
+export async function getGlossaryTerms(pinnedOnly = false) {
+  const res = await fetch(
+    `${BASE_URL}/api/dev/translate/glossary?pinned_only=${pinnedOnly}`,
+  )
+  return handleResponse(res)
+}
+
+export async function getGlossaryStats() {
+  const res = await fetch(`${BASE_URL}/api/dev/translate/glossary/stats`)
+  return handleResponse(res)
+}
+
+export async function patchTermPin(termId, isPinned) {
+  const res = await fetch(`${BASE_URL}/api/dev/translate/glossary/${termId}/pin`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ is_pinned: isPinned }),
+  })
+  return handleResponse(res)
+}
+
+export async function deleteTerm(termId) {
+  const res = await fetch(`${BASE_URL}/api/dev/translate/glossary/${termId}`, {
+    method: 'DELETE',
+  })
+  return handleResponse(res)
+}
+
+export async function getUsageStats() {
+  const res = await fetch(`${BASE_URL}/api/dev/translate/usage-stats`)
+  return handleResponse(res)
+}
+
 // ── 릴리즈 노트 생성 ───────────────────────────────────────────────────────
 
 export async function generateReleaseNote({ commits, version = '', productName = '', audience = 'general' }) {
