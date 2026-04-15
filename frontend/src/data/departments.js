@@ -165,9 +165,9 @@ export const CATEGORIES = [
         description: '코드 리뷰 · 기술 문서 · 장애 원인 분석 · 릴리즈 노트',
         tools: [
           { id: 'dev-review',   label: '코드 리뷰 지원',       description: '코드를 붙여넣으면 품질·보안·성능 관점에서 리뷰 코멘트를 생성합니다.', icon: 'check' },
-          { id: 'dev-docs',     label: '기술 문서 자동화',     description: 'API 스펙, 아키텍처 설명 등 기술 문서 초안을 빠르게 작성합니다.',    icon: 'document' },
-          { id: 'dev-incident', label: '장애 원인 분석',       description: '에러 로그와 증상을 입력하면 원인과 해결 방향을 분석합니다.',          icon: 'chart' },
-          { id: 'dev-release',  label: '릴리즈 노트 생성',     description: '커밋 내역이나 변경 사항을 사용자 친화적인 릴리즈 노트로 변환합니다.', icon: 'edit' },
+          { id: 'dev-docs',     label: '인프라 문서 챗봇',     description: '운영 매뉴얼·아키텍처 문서를 업로드하면 질의응답으로 빠르게 정보를 찾습니다.', icon: 'document', path: '/rnd/dev/dev-docs' },
+          { id: 'dev-incident', label: '장애 로그 분석',       description: '에러 로그·스택트레이스를 붙여넣으면 근본 원인과 조치 방안을 분석합니다.', icon: 'chart', path: '/rnd/dev/log-analysis' },
+          { id: 'dev-release',  label: '릴리즈 노트 생성',     description: '커밋 메시지를 붙여넣으면 대상 독자에 맞는 릴리즈 노트를 자동 생성합니다.', icon: 'edit', path: '/rnd/dev/release-note' },
         ],
       },
       {
