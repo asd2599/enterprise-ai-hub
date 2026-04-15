@@ -7,7 +7,7 @@ const HR_TOOLS = [
     id: 'employee-id-generator',
     label: '사번 생성기',
     description:
-      '입사 부서코드+년도, 일련+랜덤(2자리) 규칙으로 사번을 발급합니다. 발급된 사번으로만 회원가입할 수 있습니다.',
+      '인사팀에서 발급된 사번으로만 회원가입할 수 있습니다.',
     path: '/backoffice/hr/employee-id-generator',
     badge: '사번 발급 · 가입 제한',
     icon: (
