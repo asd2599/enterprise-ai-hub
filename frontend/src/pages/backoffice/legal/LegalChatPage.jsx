@@ -200,8 +200,8 @@ export default function LegalChatPage() {
 
       <div className="mt-4 space-y-6">
         {/* 헤더 */}
-        <div className="rounded-xl border border-violet-200 bg-violet-50 p-6 dark:border-violet-800 dark:bg-violet-950/30">
-          <span className="text-xs font-semibold uppercase tracking-wider text-violet-600 dark:text-violet-400">
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-6 dark:border-blue-800 dark:bg-blue-950/30">
+          <span className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
             Legal RAG Chat
           </span>
           <h1 className="mt-1 text-xl font-bold text-gray-900 dark:text-white">
@@ -213,7 +213,7 @@ export default function LegalChatPage() {
         </div>
 
         {/* 문서 목록 카드 */}
-        <div className="rounded-xl border border-violet-200 bg-white p-6 dark:border-violet-800 dark:bg-gray-900">
+        <div className="rounded-xl border border-blue-200 bg-white p-6 dark:border-blue-800 dark:bg-gray-900">
           <button
             type="button"
             onClick={() => setDocumentsExpanded(prev => !prev)}
@@ -246,8 +246,8 @@ export default function LegalChatPage() {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading || !isLoggedIn}
-                  className="min-h-[44px] rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white
-                    hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-gray-300 transition-colors"
+                  className="min-h-[44px] rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white
+                    hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300 transition-colors"
                 >
                   {uploading ? '업로드 중…' : '문서 업로드'}
                 </button>
@@ -269,7 +269,7 @@ export default function LegalChatPage() {
                     value={documentSort}
                     onChange={e => setDocumentSort(e.target.value)}
                     className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 outline-none
-                      focus:border-violet-500 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200"
+                      focus:border-blue-500 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200"
                   >
                     <option value="latest">최신순</option>
                     <option value="name">ㄱ - ㅎ</option>
@@ -327,7 +327,7 @@ export default function LegalChatPage() {
         )}
 
         {/* 채팅 카드 */}
-        <div className="rounded-xl border border-violet-200 bg-white p-6 dark:border-violet-800 dark:bg-gray-900">
+        <div className="rounded-xl border border-blue-200 bg-white p-6 dark:border-blue-800 dark:bg-gray-900">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-base font-semibold text-gray-900 dark:text-white">
@@ -348,8 +348,8 @@ export default function LegalChatPage() {
                   type="button"
                   onClick={() => handleAsk(s)}
                   disabled={chatLoading}
-                  className="text-xs px-3 py-1.5 rounded-full border border-violet-200 dark:border-violet-800
-                    text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-900/30
+                  className="text-xs px-3 py-1.5 rounded-full border border-blue-200 dark:border-blue-800
+                    text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30
                     transition-colors min-h-[36px] disabled:opacity-50"
                 >
                   {s}
@@ -375,7 +375,7 @@ export default function LegalChatPage() {
                     key={`${msg.role}-${index}`}
                     className={`w-fit rounded-xl px-4 py-3 text-sm ${
                       msg.role === 'user'
-                        ? 'self-end max-w-[70%] bg-violet-600 text-white'
+                        ? 'self-end max-w-[70%] bg-blue-600 text-white'
                         : 'max-w-[70%] bg-white text-gray-800 dark:bg-gray-950 dark:text-gray-100'
                     }`}
                   >
@@ -389,7 +389,7 @@ export default function LegalChatPage() {
                             {msg.sources?.length > 0 && (
                               <div className="flex flex-wrap gap-1">
                                 {msg.sources.map((s, si) => (
-                                  <span key={si} className="px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 font-medium">
+                                  <span key={si} className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium">
                                     {s}
                                   </span>
                                 ))}
@@ -428,15 +428,15 @@ export default function LegalChatPage() {
               placeholder="법률·계약 관련 궁금한 점을 입력하세요."
               disabled={!isLoggedIn || !isReady || chatLoading}
               className="h-[44px] flex-1 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none
-                transition focus:border-violet-500 disabled:cursor-not-allowed disabled:bg-gray-100
+                transition focus:border-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100
                 dark:border-gray-700 dark:bg-gray-950 dark:text-white dark:disabled:bg-gray-800"
             />
             <button
               type="button"
               onClick={() => handleAsk()}
               disabled={!isLoggedIn || !isReady || chatLoading || !question.trim()}
-              className="min-h-[44px] rounded-lg bg-violet-600 px-5 py-2 text-sm font-medium text-white
-                transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+              className="min-h-[44px] rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white
+                transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
               질문하기
             </button>
