@@ -1,8 +1,56 @@
 // 인사(HR)팀 서브 대시보드 — 인사 업무 도구 선택 허브
+import { Fragment, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Breadcrumb from '../../components/layout/Breadcrumb';
+import { getAuthSession } from '../../api/auth';
 
 const HR_TOOLS = [
+  {
+    id: 'regulation-chat',
+    label: '인사 규정 챗봇',
+    description:
+      '사내 규정과 제도 관련 질문에 빠르게 답변하고 참고 규정을 안내합니다.',
+    path: '/backoffice/hr/regulation-chat',
+    badge: '규정 · 제도 · Q&A',
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+      />
+    ),
+  },
+  {
+    id: 'hire-request',
+    label: '채용 요청서 작성',
+    description: '채용 필요 인원과 요청 사유를 표준 양식에 맞춰 정리합니다.',
+    path: '/backoffice/hr/hire-request',
+    badge: '요청서 · 승인 · 채용 계획',
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+      />
+    ),
+  },
+  {
+    id: 'humanresources',
+    label: '인사팀 알림사항',
+    description: '인사팀 공지, 마감 일정, 운영 메모를 한 화면에서 확인합니다.',
+    path: '/backoffice/hr/humanresources',
+    badge: '공지 · 일정 · 운영 메모',
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+      />
+    ),
+  },
   {
     id: 'employee-id-generator',
     label: '사번 생성기',
@@ -36,17 +84,18 @@ const HR_TOOLS = [
     ),
   },
   {
-    id: 'humanresources',
-    label: '인사팀 알림사항',
-    description: '인사팀 공지, 마감 일정, 운영 메모를 한 화면에서 확인합니다.',
-    path: '/backoffice/hr/humanresources',
-    badge: '공지 · 일정 · 운영 메모',
+    id: 'upload-regulation',
+    label: '규정 문서 업로드',
+    description:
+      '인사 규정 문서를 업로드하여 챗봇이 최신 규정을 기준으로 답변하도록 설정합니다.',
+    path: '/backoffice/hr/upload-regulation',
+    badge: '문서 업로드 · 규정 반영',
     icon: (
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth={1.5}
-        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
       />
     ),
   },
@@ -63,21 +112,6 @@ const HR_TOOLS = [
         strokeLinejoin="round"
         strokeWidth={1.5}
         d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-      />
-    ),
-  },
-  {
-    id: 'hire-request',
-    label: '채용 요청서 작성',
-    description: '채용 필요 인원과 요청 사유를 표준 양식에 맞춰 정리합니다.',
-    path: '/backoffice/hr/hire-request',
-    badge: '요청서 · 승인 · 채용 계획',
-    icon: (
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={1.5}
-        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
       />
     ),
   },
@@ -101,34 +135,34 @@ const HR_TOOLS = [
   },
   */
   {
-    id: 'upload-regulation',
-    label: '규정 문서 업로드',
+    id: 'departments',
+    label: '부서',
     description:
-      '인사 규정 문서를 업로드하여 챗봇이 최신 규정을 기준으로 답변하도록 설정합니다.',
-    path: '/backoffice/hr/upload-regulation',
-    badge: '문서 업로드 · 규정 반영',
+      '조직 개편이나 인력 재배치에 맞춰 전체 인원의 부서를 일괄 변경합니다.',
+    path: '/backoffice/hr/departments',
+    badge: '조직 변경 · 부서 이동 · 인원 관리',
     icon: (
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth={1.5}
-        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
+        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
       />
     ),
   },
   {
-    id: 'regulation-chat',
-    label: '인사 규정 챗봇',
+    id: 'evaluate',
+    label: '인사 평가 보고서 작성',
     description:
-      '사내 규정과 제도 관련 질문에 빠르게 답변하고 참고 규정을 안내합니다.',
-    path: '/backoffice/hr/regulation-chat',
-    badge: '규정 · 제도 · Q&A',
+      '평가 결과와 근거를 바탕으로 객관적인 인사 평가 보고서를 작성합니다.',
+    path: '/backoffice/hr/evaluate',
+    badge: '평가 · 리포트 · 성과',
     icon: (
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth={1.5}
-        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
       />
     ),
   },
@@ -150,24 +184,6 @@ const HR_TOOLS = [
       />
     ),
   },
-  */
-  {
-    id: 'departments',
-    label: '부서',
-    description:
-      '조직 개편이나 인력 재배치에 맞춰 전체 인원의 부서를 일괄 변경합니다.',
-    path: '/backoffice/hr/departments',
-    badge: '조직 변경 · 부서 이동 · 인원 관리',
-    icon: (
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={1.5}
-        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-      />
-    ),
-  },
-  /*
   // 인재 매칭 — /backoffice/hr/match (숨김: 다시 쓸 때 주석 해제)
   {
     id: 'match',
@@ -185,24 +201,6 @@ const HR_TOOLS = [
       />
     ),
   },
-  */
-  {
-    id: 'evaluate',
-    label: '인사 평가 보고서 작성',
-    description:
-      '평가 결과와 근거를 바탕으로 객관적인 인사 평가 보고서를 작성합니다.',
-    path: '/backoffice/hr/evaluate',
-    badge: '평가 · 리포트 · 성과',
-    icon: (
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={1.5}
-        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-      />
-    ),
-  },
-  /*
   // 온보딩 자료 자동화 — /backoffice/hr/auto-manual (숨김: 다시 쓸 때 주석 해제)
   {
     id: 'auto-manual',
@@ -223,8 +221,21 @@ const HR_TOOLS = [
   */
 ];
 
+const HR_ONLY_IDS = new Set(['regulation-chat', 'hire-request'])
+
 export default function HRPage() {
   const navigate = useNavigate();
+  const [session, setSession] = useState(() => getAuthSession())
+
+  useEffect(() => {
+    function sync() { setSession(getAuthSession()) }
+    window.addEventListener('auth-session-changed', sync)
+    return () => window.removeEventListener('auth-session-changed', sync)
+  }, [])
+
+  const dept = session?.employee?.department || ''
+  const isHRAdmin = dept === '인사(HR)팀' || dept === '기타(관리자)'
+  const visibleTools = isHRAdmin ? HR_TOOLS : HR_TOOLS.filter((t) => HR_ONLY_IDS.has(t.id))
 
   return (
     <div>
@@ -254,14 +265,17 @@ export default function HRPage() {
           있습니다.
         </p>
         <span className="inline-block mt-3 text-xs px-2.5 py-1 rounded-full font-medium bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
-          인사 도구 9개
+          AI 도구 {visibleTools.length}개
         </span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {HR_TOOLS.map((tool) => (
+        {visibleTools.map((tool, i) => (
+          <Fragment key={tool.id}>
+            {isHRAdmin && i === 2 && (
+              <hr className="col-span-full border-gray-200 dark:border-gray-700" />
+            )}
           <button
-            key={tool.id}
             onClick={() => navigate(tool.path)}
             className="group text-left w-full rounded-xl border bg-white dark:bg-gray-900 p-5
               transition-all duration-150 hover:shadow-md active:scale-[0.98] cursor-pointer
@@ -304,6 +318,7 @@ export default function HRPage() {
               </svg>
             </div>
           </button>
+          </Fragment>
         ))}
       </div>
     </div>

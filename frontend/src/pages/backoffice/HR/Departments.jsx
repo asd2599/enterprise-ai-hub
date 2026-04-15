@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import { HiPencilSquare } from 'react-icons/hi2';
 import Breadcrumb from '../../../components/layout/Breadcrumb';
 import { DEPT_LABEL_OPTIONS } from '../../../data/departments';
 import { getEmployees, updateEmployeeDepartment } from '../../../api/hr';
@@ -14,10 +15,13 @@ export default function Departments() {
   const [employees, setEmployees] = useState([]);
   const [departmentDrafts, setDepartmentDrafts] = useState({});
   const [changeReasonDrafts, setChangeReasonDrafts] = useState({});
+  const [positionDrafts, setPositionDrafts] = useState({});
+  const [touchedIds, setTouchedIds] = useState(new Set());
   const [lastAppliedMessage, setLastAppliedMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [updatingId, setUpdatingId] = useState('');
+  const [bulkSaving, setBulkSaving] = useState(false);
   const [expandedDepartment, setExpandedDepartment] = useState('');
 
   const fetchEmployees = useCallback(async () => {
@@ -35,6 +39,11 @@ export default function Departments() {
       );
       setChangeReasonDrafts(
         Object.fromEntries(items.map((employee) => [employee.employee_id, ''])),
+      );
+      setPositionDrafts(
+        Object.fromEntries(
+          items.map((employee) => [employee.employee_id, employee.position || '']),
+        ),
       );
     } catch (fetchError) {
       setError(fetchError.message || '사원 데이터를 불러오지 못했습니다.');
@@ -81,17 +90,30 @@ export default function Departments() {
       }));
   }, [employees]);
 
+  const hasAnyChanges = useMemo(() =>
+    employees.some((emp) => {
+      const deptChanged = (departmentDrafts[emp.employee_id] ?? emp.department) !== emp.department;
+      const posChanged = (positionDrafts[emp.employee_id] ?? emp.position ?? '') !== (emp.position || '');
+      return deptChanged || posChanged;
+    }),
+  [employees, departmentDrafts, positionDrafts]);
+
   function handleDepartmentDraftChange(employeeId, nextDepartment) {
-    setDepartmentDrafts((prev) => ({
-      ...prev,
-      [employeeId]: nextDepartment,
-    }));
+    setDepartmentDrafts((prev) => ({ ...prev, [employeeId]: nextDepartment }));
+    setTouchedIds((prev) => new Set([...prev, employeeId]));
   }
 
   function handleChangeReasonDraftChange(employeeId, nextReason) {
     setChangeReasonDrafts((prev) => ({
       ...prev,
       [employeeId]: nextReason,
+    }));
+  }
+
+  function handlePositionDraftChange(employeeId, nextPosition) {
+    setPositionDrafts((prev) => ({
+      ...prev,
+      [employeeId]: nextPosition,
     }));
   }
 
@@ -103,14 +125,9 @@ export default function Departments() {
     const nextDepartment = departmentDrafts[employeeId] || previousDepartment;
     const changeReason = (changeReasonDrafts[employeeId] || '').trim();
 
-    if (nextDepartment === previousDepartment) {
-      return;
-    }
-
-    if (!changeReason) {
-      setError('변경 사유를 입력해 주세요.');
-      return;
-    }
+    const positionVal = (positionDrafts[employeeId] || '').trim();
+    if (!positionVal) { setError('직급이 입력되지 않았습니다.'); return; }
+    if (!changeReason) { setError('변경 사유가 입력되지 않았습니다.'); return; }
 
     setUpdatingId(employeeId);
     setError('');
@@ -120,6 +137,7 @@ export default function Departments() {
       const updated = await updateEmployeeDepartment(employeeId, {
         department: nextDepartment,
         reason: changeReason,
+        position: positionDrafts[employeeId] || undefined,
       });
 
       setEmployees((prev) =>
@@ -141,6 +159,8 @@ export default function Departments() {
         ...prev,
         [employeeId]: '',
       }));
+      setPositionDrafts((prev) => ({ ...prev, [employeeId]: updated.position || '' }));
+      setTouchedIds((prev) => { const next = new Set(prev); next.delete(employeeId); return next; });
 
       setLastAppliedMessage(
         `${employee.name}님의 부서를 "${previousDepartment}"에서 "${updated.department}"으로 변경했습니다. 변경 사유: ${changeReason}`,
@@ -154,6 +174,54 @@ export default function Departments() {
     } finally {
       setUpdatingId('');
     }
+  };
+
+const handleBulkSave = async () => {
+    const changed = employees.filter((emp) => {
+      const deptChanged = (departmentDrafts[emp.employee_id] ?? emp.department) !== emp.department;
+      const posChanged = (positionDrafts[emp.employee_id] ?? emp.position ?? '') !== (emp.position || '');
+      return deptChanged || posChanged;
+    });
+    if (changed.length === 0) return;
+
+    const missingPosition = changed.find((emp) => !(positionDrafts[emp.employee_id] || '').trim());
+    if (missingPosition) { setError('직급이 입력되지 않았습니다.'); return; }
+    const missingReason = changed.find((emp) => !(changeReasonDrafts[emp.employee_id] || '').trim());
+    if (missingReason) { setError('변경 사유가 입력되지 않았습니다.'); return; }
+
+    setBulkSaving(true);
+    setError('');
+    setLastAppliedMessage('');
+    let savedNames = [];
+
+    for (const emp of changed) {
+      try {
+        const updated = await updateEmployeeDepartment(emp.employee_id, {
+          department: departmentDrafts[emp.employee_id] || emp.department,
+          reason: (changeReasonDrafts[emp.employee_id] || '').trim(),
+          position: positionDrafts[emp.employee_id] || undefined,
+        });
+        setEmployees((prev) =>
+          prev.map((item) =>
+            item.employee_id === emp.employee_id
+              ? { ...item, department: updated.department, position: updated.position }
+              : item,
+          ),
+        );
+        setDepartmentDrafts((prev) => ({ ...prev, [emp.employee_id]: updated.department }));
+        setChangeReasonDrafts((prev) => ({ ...prev, [emp.employee_id]: '' }));
+        setPositionDrafts((prev) => ({ ...prev, [emp.employee_id]: updated.position || '' }));
+        setTouchedIds((prev) => { const next = new Set(prev); next.delete(emp.employee_id); return next; });
+        savedNames.push(emp.name);
+      } catch (e) {
+        setError(e.message || '일부 저장에 실패했습니다.');
+      }
+    }
+
+    if (savedNames.length > 0) {
+      setLastAppliedMessage(`${savedNames.join(', ')}님의 변경 사항을 저장했습니다.`);
+    }
+    setBulkSaving(false);
   };
 
   return (
@@ -278,11 +346,21 @@ export default function Departments() {
               <thead>
                 <tr className="text-left text-gray-500 dark:text-gray-400">
                   <th className="w-[16%] px-4 py-3 font-medium">사번</th>
-                  <th className="w-[16%] px-4 py-3 font-medium">이름</th>
+                  <th className="w-[17%] px-4 py-3 font-medium">이름</th>
                   <th className="w-[14%] px-4 py-3 font-medium">직급</th>
-                  <th className="w-[22%] px-4 py-3 font-medium">현재 부서</th>
-                  <th className="w-[32%] px-4 py-3 font-medium">
-                    개별 부서 변경
+                  <th className="w-[19%] px-4 py-3 font-medium">현재 부서</th>
+                  <th className="w-[34%] px-4 py-3 font-medium">
+                    <div className="flex items-center justify-between">
+                      <span>개별 부서 변경</span>
+                      <button
+                        type="button"
+                        onClick={handleBulkSave}
+                        disabled={bulkSaving || !hasAnyChanges}
+                        className={`w-20 rounded-lg px-3 py-1.5 text-xs font-bold text-white transition disabled:cursor-not-allowed ${hasAnyChanges ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 dark:bg-gray-600'}`}
+                      >
+                        {bulkSaving ? '· · ·' : '전체 저장'}
+                      </button>
+                    </div>
                   </th>
                 </tr>
               </thead>
@@ -311,9 +389,10 @@ export default function Departments() {
 
                 {!loading &&
                   employees.map((employee) => {
-                    const hasDepartmentChanged =
-                      (departmentDrafts[employee.employee_id] ??
-                        employee.department) !== employee.department;
+                    const isTouched = touchedIds.has(employee.employee_id);
+                    const hasChanges =
+                      (departmentDrafts[employee.employee_id] ?? employee.department) !== employee.department ||
+                      (positionDrafts[employee.employee_id] ?? employee.position ?? '') !== (employee.position || '');
 
                     return (
                       <Fragment key={employee.employee_id}>
@@ -325,7 +404,23 @@ export default function Departments() {
                             {employee.name}
                           </td>
                           <td className="px-4 py-3 text-gray-600 dark:text-gray-300">
-                            {employee.position || '-'}
+                            <div className="flex items-center justify-between gap-1.5">
+                              <span>{employee.position || '-'}</span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setTouchedIds((prev) =>
+                                    prev.has(employee.employee_id)
+                                      ? (new Set([...prev].filter((id) => id !== employee.employee_id)))
+                                      : new Set([...prev, employee.employee_id])
+                                  )
+                                }
+                                aria-label="직급·부서 수정"
+                                className="text-gray-400 transition hover:text-blue-500 dark:hover:text-blue-400"
+                              >
+                                <HiPencilSquare className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
                           </td>
                           <td className="px-4 py-3 text-gray-600 dark:text-gray-300">
                             {employee.department}
@@ -359,11 +454,8 @@ export default function Departments() {
                                     employee.employee_id,
                                   )
                                 }
-                                disabled={
-                                  updatingId === employee.employee_id ||
-                                  !hasDepartmentChanged
-                                }
-                                className="min-w-[56px] rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                                disabled={updatingId === employee.employee_id || !hasChanges}
+                                className={`min-w-[56px] rounded-lg px-3 py-2 text-sm font-medium text-white transition disabled:cursor-not-allowed ${hasChanges ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 dark:bg-gray-600'}`}
                               >
                                 {updatingId === employee.employee_id
                                   ? '· · ·'
@@ -372,29 +464,49 @@ export default function Departments() {
                             </div>
                           </td>
                         </tr>
-                        {hasDepartmentChanged ? (
+                        {isTouched ? (
                           <tr>
                             <td colSpan={5} className="px-4 pb-3 pt-0">
-                              <div className="rounded-lg bg-gray-50 px-4 py-3 dark:bg-gray-800/60">
-                                <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
-                                  변경 사유
-                                </label>
-                                <textarea
-                                  rows={1}
-                                  value={
-                                    changeReasonDrafts[employee.employee_id] ??
-                                    ''
-                                  }
-                                  onChange={(e) =>
-                                    handleChangeReasonDraftChange(
-                                      employee.employee_id,
-                                      e.target.value,
-                                    )
-                                  }
-                                  disabled={updatingId === employee.employee_id}
-                                  className="block w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 dark:border-gray-700 dark:bg-gray-950 dark:text-white"
-                                  placeholder="예: 상반기 조직 개편"
-                                />
+                              <div className="grid grid-cols-[1fr_2fr] gap-3 rounded-lg bg-gray-50 px-4 py-3 dark:bg-gray-800/60">
+                                <div>
+                                  <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                                    직급
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={positionDrafts[employee.employee_id] ?? ''}
+                                    onChange={(e) =>
+                                      handlePositionDraftChange(
+                                        employee.employee_id,
+                                        e.target.value,
+                                      )
+                                    }
+                                    disabled={updatingId === employee.employee_id}
+                                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 dark:border-gray-700 dark:bg-gray-950 dark:text-white"
+                                    placeholder="예: 팀장"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                                    변경 사유
+                                  </label>
+                                  <textarea
+                                    rows={1}
+                                    value={
+                                      changeReasonDrafts[employee.employee_id] ??
+                                      ''
+                                    }
+                                    onChange={(e) =>
+                                      handleChangeReasonDraftChange(
+                                        employee.employee_id,
+                                        e.target.value,
+                                      )
+                                    }
+                                    disabled={updatingId === employee.employee_id}
+                                    className="block w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 dark:border-gray-700 dark:bg-gray-950 dark:text-white"
+                                    placeholder="예: 상반기 조직 개편"
+                                  />
+                                </div>
                               </div>
                             </td>
                           </tr>
