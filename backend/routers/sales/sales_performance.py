@@ -2,8 +2,10 @@
 영업 실적 분석·등록 라우터 — /api/sales/performance/*
 """
 from typing import Optional
+from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel
 
 from services.sales.sales_performance_entry_service import (
@@ -14,6 +16,9 @@ from services.sales.sales_performance_entry_service import (
 )
 from services.sales.sales_performance_service import (
     analyze_performance,
+    export_performance_to_excel,
+    get_performance_compare,
+    get_performance_trend,
     get_periods,
     get_team_members,
 )
@@ -49,6 +54,69 @@ def performance_periods(period_type: str = ""):
     if period_type and period_type not in VALID_TYPES:
         raise HTTPException(status_code=400, detail=f"period_type은 {VALID_TYPES} 중 하나여야 합니다.")
     return get_periods(period_type=period_type)
+
+
+@router.get("/trend")
+def performance_trend(period_type: str = "month", limit: int = 6):
+    """
+    기간 타입별 최근 N개 기간의 실적 추세 (달성률·성장률 차트용).
+
+    Query: period_type = 'month' | 'quarter' | 'year', limit = 1~24
+    Response: [{ period_key, period_label, target_revenue, actual_revenue,
+                 achievement_rate, growth_rate, win_rate, ... }, ...]
+    """
+    if period_type not in VALID_TYPES:
+        raise HTTPException(status_code=400, detail=f"period_type은 {VALID_TYPES} 중 하나여야 합니다.")
+    if limit < 1 or limit > 24:
+        raise HTTPException(status_code=400, detail="limit는 1~24 범위여야 합니다.")
+    try:
+        return get_performance_trend(period_type=period_type, limit=limit)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"추세 조회 실패: {str(e)}")
+
+
+@router.get("/compare/{period_key}")
+def performance_compare(period_key: str):
+    """
+    선택 기간과 직전 기간(전월·전분기·전년) 요약 지표를 나란히 반환.
+
+    Response: { current, previous, previous_key, delta }
+    """
+    if not period_key.strip():
+        raise HTTPException(status_code=400, detail="period_key가 필요합니다.")
+    try:
+        return get_performance_compare(period_key.strip())
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"비교 조회 실패: {str(e)}")
+
+
+@router.get("/export/{period_key}")
+def performance_export(period_key: str, member_id: str = "all"):
+    """
+    실적 분석 리포트를 Excel(xlsx) 파일로 다운로드합니다.
+    """
+    if not period_key.strip():
+        raise HTTPException(status_code=400, detail="period_key가 필요합니다.")
+    try:
+        xlsx_bytes = export_performance_to_excel(period_key=period_key.strip(), member_id=member_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Excel 생성 실패: {str(e)}")
+
+    filename = f"sales_report_{period_key}.xlsx"
+    headers = {
+        "Content-Disposition": f"attachment; filename=\"{filename}\"; filename*=UTF-8''{quote(filename)}",
+    }
+    return Response(
+        content=xlsx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers=headers,
+    )
 
 
 @router.post("/analyze")

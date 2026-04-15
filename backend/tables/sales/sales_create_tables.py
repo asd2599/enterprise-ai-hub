@@ -3,13 +3,19 @@
 
 실행: (backend/ 디렉토리에서)
     python -m tables.sales.sales_create_tables
+    # 또는 uv 환경:
+    uv run python -m tables.sales.sales_create_tables
 
-정규화 3 테이블:
+실적 관련 정규화 3 테이블:
     1) sales_period_summary      — 기간 단위 요약 (1행/기간)
     2) sales_pipeline_stages     — 기간별 파이프라인 단계 (N행/기간)
     3) sales_member_performance  — 기간별 팀원 실적 (N행/기간)
 
-ON DELETE CASCADE로 '기간 덮어쓰기' 시 하위 행을 한 번에 정리합니다.
+제안서 RAG 테이블:
+    4) sales_proposal_documents  — 성공 사례 문서 메타 (업종 필터)
+    5) sales_proposal_chunks     — 청크 + OpenAI 임베딩 벡터
+
+ON DELETE CASCADE로 '기간 덮어쓰기' / '문서 삭제' 시 하위 행을 한 번에 정리합니다.
 """
 import os
 import pg8000.dbapi as pg8000
@@ -77,6 +83,44 @@ TABLES: list[tuple[str, str]] = [
         )
         """,
     ),
+    (
+        "sales_proposal_documents",
+        """
+        CREATE TABLE IF NOT EXISTS sales_proposal_documents (
+            id                      SERIAL       PRIMARY KEY,
+            industry                VARCHAR(30)  NOT NULL,   -- '제조업' | '유통·서비스' | 'IT'
+            file_name               VARCHAR(255) NOT NULL,
+            file_type               VARCHAR(20)  NOT NULL,
+            file_bytes              BYTEA        NOT NULL,
+            text_content            TEXT         NOT NULL,
+            text_length             INTEGER      NOT NULL,
+            preview                 TEXT,
+            uploaded_by_employee_id VARCHAR(50),
+            uploaded_by_name        VARCHAR(100),
+            uploaded_by_department  VARCHAR(100),
+            is_active               BOOLEAN      NOT NULL DEFAULT TRUE,
+            created_at              TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+            updated_at              TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+            deleted_at              TIMESTAMPTZ,
+            CHECK (industry IN ('제조업','유통·서비스','IT'))
+        )
+        """,
+    ),
+    (
+        "sales_proposal_chunks",
+        """
+        CREATE TABLE IF NOT EXISTS sales_proposal_chunks (
+            id          SERIAL  PRIMARY KEY,
+            document_id INTEGER NOT NULL REFERENCES sales_proposal_documents(id) ON DELETE CASCADE,
+            industry    VARCHAR(30)  NOT NULL,
+            file_name   VARCHAR(255) NOT NULL,
+            chunk_index INTEGER      NOT NULL,
+            chunk_text  TEXT         NOT NULL,
+            embedding   REAL[]       NOT NULL,
+            created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+        )
+        """,
+    ),
 ]
 
 INDEXES: list[str] = [
@@ -84,6 +128,11 @@ INDEXES: list[str] = [
     "CREATE INDEX IF NOT EXISTS idx_sales_period_summary_start_date  ON sales_period_summary (start_date DESC)",
     "CREATE INDEX IF NOT EXISTS idx_sales_pipeline_stages_period     ON sales_pipeline_stages (period_key)",
     "CREATE INDEX IF NOT EXISTS idx_sales_member_performance_period  ON sales_member_performance (period_key)",
+    "CREATE INDEX IF NOT EXISTS idx_sales_proposal_docs_active       ON sales_proposal_documents (is_active, deleted_at)",
+    "CREATE INDEX IF NOT EXISTS idx_sales_proposal_docs_industry     ON sales_proposal_documents (industry)",
+    "CREATE INDEX IF NOT EXISTS idx_sales_proposal_docs_created_at   ON sales_proposal_documents (created_at DESC)",
+    "CREATE INDEX IF NOT EXISTS idx_sales_proposal_chunks_doc        ON sales_proposal_chunks (document_id)",
+    "CREATE INDEX IF NOT EXISTS idx_sales_proposal_chunks_industry   ON sales_proposal_chunks (industry)",
 ]
 
 # updated_at 자동 갱신 트리거
