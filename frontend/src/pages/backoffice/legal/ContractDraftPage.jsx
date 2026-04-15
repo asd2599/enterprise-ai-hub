@@ -35,7 +35,7 @@ function FieldLabel({ children, required }) {
 // 공통 인풋 스타일
 const inputCls = `w-full text-sm rounded-lg border border-gray-200 dark:border-gray-600
   bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200
-  px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-violet-400 min-h-[44px]`
+  px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-blue-400 min-h-[44px]`
 
 export default function ContractDraftPage() {
   const [form, setForm] = useState({
@@ -115,13 +115,13 @@ export default function ContractDraftPage() {
       />
 
       {/* 헤더 */}
-      <div className="mt-4 mb-6 rounded-xl border p-5 bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800">
+      <div className="mt-4 mb-6 rounded-xl border p-5 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-violet-600 text-white text-xs font-bold shrink-0">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-blue-600 text-white text-xs font-bold shrink-0">
             생성
           </div>
           <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-violet-600 dark:text-violet-400">
+            <span className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
               Back-Office · 법무/컴플라이언스팀
             </span>
             <h1 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">
@@ -247,7 +247,7 @@ export default function ContractDraftPage() {
             onClick={handleGenerate}
             disabled={!isValid || loading}
             className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium
-              bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50 min-h-[44px]"
+              bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 min-h-[44px]"
           >
             {loading ? <><Spinner size={4} /> 생성 중...</> : '📄 계약서 초안 생성'}
           </button>
@@ -332,7 +332,7 @@ export default function ContractDraftPage() {
                   <p className="text-xs text-gray-400 mb-1.5">사내 법령·사규 참조</p>
                   <div className="flex flex-wrap gap-1.5">
                     {ragSources.map(s => (
-                      <span key={s} className="text-xs px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 font-medium">
+                      <span key={s} className="text-xs px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium">
                         {s}
                       </span>
                     ))}

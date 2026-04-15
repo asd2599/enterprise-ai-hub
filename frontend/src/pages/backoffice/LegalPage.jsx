@@ -48,13 +48,13 @@ export default function LegalPage() {
       />
 
       {/* 헤더 */}
-      <div className="mt-4 mb-7 rounded-xl border p-5 bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800">
+      <div className="mt-4 mb-7 rounded-xl border p-5 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0 bg-violet-600">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0 bg-blue-600">
             법무
           </div>
           <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-violet-600 dark:text-violet-400">
+            <span className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
               Back-Office
             </span>
             <h1 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">
@@ -65,7 +65,7 @@ export default function LegalPage() {
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           세부 직무를 선택하여 해당 AI 도구 페이지로 이동합니다.
         </p>
-        <span className="inline-block mt-3 text-xs px-2.5 py-1 rounded-full font-medium bg-violet-100 dark:bg-violet-900/60 text-violet-700 dark:text-violet-300">
+        <span className="inline-block mt-3 text-xs px-2.5 py-1 rounded-full font-medium bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
           세부 직무 3개
         </span>
       </div>
@@ -78,11 +78,11 @@ export default function LegalPage() {
             onClick={() => navigate(`/backoffice/legal/${sub.id}`)}
             className="group text-left w-full rounded-xl border bg-white dark:bg-gray-900 p-5
               transition-all duration-150 hover:shadow-md active:scale-[0.98] cursor-pointer
-              border-violet-200 dark:border-violet-800
-              hover:border-violet-400 dark:hover:border-violet-500 hover:shadow-violet-100 dark:hover:shadow-violet-900/20"
+              border-blue-200 dark:border-blue-800
+              hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-blue-100 dark:hover:shadow-blue-900/20"
           >
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 bg-violet-100 dark:bg-violet-900/60">
-              <svg className="w-5 h-5 text-violet-600 dark:text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 bg-blue-100 dark:bg-blue-900/60">
+              <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {sub.icon}
               </svg>
             </div>
@@ -92,10 +92,10 @@ export default function LegalPage() {
             <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-3">
               {sub.description}
             </p>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-violet-50 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400 font-medium">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-medium">
               {sub.badge}
             </span>
-            <div className="flex items-center gap-1 text-xs font-medium text-violet-600 dark:text-violet-400 mt-3">
+            <div className="flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400 mt-3">
               바로가기
               <svg className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
