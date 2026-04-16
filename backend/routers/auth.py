@@ -1,5 +1,5 @@
 """
-인증 라우터 — /api/auth/*
+인증 라우터: /api/auth/*
 """
 import hashlib
 import hmac
@@ -12,7 +12,6 @@ from pydantic import BaseModel
 from database import get_connection
 from services.HR.issued_employee_id_service import (
     assert_issued_and_unused,
-    mark_employee_id_used,
     normalize_employee_id,
 )
 
@@ -137,7 +136,17 @@ def register_employee(body: RegisterEmployeeRequest):
                 raise HTTPException(status_code=409, detail="이미 사용 중인 사번입니다.")
             raise HTTPException(status_code=409, detail="이미 사용 중인 이메일입니다.")
 
-        assert_issued_and_unused(cur, employee_id)
+        # 발급되지 않은 아이디(사번)도 가입 가능 - was_issued 플래그로 구분해 응답하고, 프론트에서 색상으로 구분
+        was_issued = True
+        try:
+            assert_issued_and_unused(cur, employee_id)
+        except HTTPException as issue_exc:
+            if issue_exc.status_code == 403:
+                # 미발급 또는 voided 사번: 가입은 진행, 플래그만 기록
+                was_issued = False
+            else:
+                # 409 이미 사용된 사번 등은 그대로 차단
+                raise
 
         cur.execute(
             """
@@ -158,7 +167,6 @@ def register_employee(body: RegisterEmployeeRequest):
             ),
         )
         row = cur.fetchone()
-        mark_employee_id_used(cur, employee_id)
         conn.commit()
     except HTTPException:
         conn.rollback()
@@ -175,7 +183,12 @@ def register_employee(body: RegisterEmployeeRequest):
         "employee_id": row[0],
         "created_at": str(row[1]),
         "status": "pending_approval",
-        "message": "회원가입 요청이 완료되었습니다. 인사팀 승인 후 로그인할 수 있습니다.",
+        "was_issued": was_issued,
+        "message": (
+            "회원가입 요청이 완료되었습니다. 인사팀 승인 후 로그인할 수 있습니다."
+            if was_issued
+            else "미발급 사번으로 회원가입이 요청되었습니다. 인사팀 승인 시 별도 확인이 필요합니다."
+        ),
     }
 
 
@@ -327,7 +340,6 @@ def login_employee(body: LoginRequest):
         # 비활성화된 승인 계정은 로그인 차단
         if is_verified and not is_active:
             raise HTTPException(status_code=403, detail="비활성화된 계정입니다.")
-        # 부서/직급 미배정은 차단하지 않음 — 프론트엔드에서 안내 메시지로 처리
     except HTTPException:
         raise
     except Exception as exc:

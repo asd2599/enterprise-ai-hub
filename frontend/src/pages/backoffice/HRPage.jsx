@@ -1,8 +1,7 @@
 // 인사(HR)팀 서브 대시보드 — 인사 업무 도구 선택 허브
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Breadcrumb from '../../components/layout/Breadcrumb';
-import { getAuthSession } from '../../api/auth';
 
 const HR_TOOLS = [
   {
@@ -55,9 +54,9 @@ const HR_TOOLS = [
     id: 'employee-id-generator',
     label: '사번 생성기',
     description:
-      '인사팀에서 발급된 사번으로만 회원가입할 수 있습니다.',
+      '사번을 생성하고 관리합니다.',
     path: '/backoffice/hr/employee-id-generator',
-    badge: '사번 발급 · 가입 제한',
+    badge: '사번 발급',
     icon: (
       <path
         strokeLinecap="round"
@@ -221,21 +220,10 @@ const HR_TOOLS = [
   */
 ];
 
-const HR_ONLY_IDS = new Set(['regulation-chat', 'hire-request'])
-
 export default function HRPage() {
   const navigate = useNavigate();
-  const [session, setSession] = useState(() => getAuthSession())
-
-  useEffect(() => {
-    function sync() { setSession(getAuthSession()) }
-    window.addEventListener('auth-session-changed', sync)
-    return () => window.removeEventListener('auth-session-changed', sync)
-  }, [])
-
-  const dept = session?.employee?.department || ''
-  const isHRAdmin = dept === '인사(HR)팀' || dept === '기타(관리자)'
-  const visibleTools = isHRAdmin ? HR_TOOLS : HR_TOOLS.filter((t) => HR_ONLY_IDS.has(t.id))
+  // 전체 도구를 항상 노출 — 권한이 없는 항목은 라우터 가드(HRAdminGuard)가 접근 거부 화면을 표시합니다
+  const visibleTools = HR_TOOLS
 
   return (
     <div>
@@ -270,11 +258,8 @@ export default function HRPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {visibleTools.map((tool, i) => (
+        {visibleTools.map((tool) => (
           <Fragment key={tool.id}>
-            {isHRAdmin && i === 2 && (
-              <hr className="col-span-full border-gray-200 dark:border-gray-700" />
-            )}
           <button
             onClick={() => navigate(tool.path)}
             className="group text-left w-full rounded-xl border bg-white dark:bg-gray-900 p-5

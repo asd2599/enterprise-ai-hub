@@ -28,6 +28,7 @@ const REQUIRED_FIELDS = [
   'name',
   'email',
   'password',
+  'confirmPassword',
   'phone_number',
 ];
 
@@ -86,13 +87,18 @@ export default function Register() {
         nickname: form.nickname.trim() || null,
       };
 
-      await registerEmployee(payload);
+      const result = await registerEmployee(payload);
+      const wasIssued = result?.was_issued !== false;
 
       navigate('/login', {
         state: {
           registeredEmployeeId: form.employee_id.trim(),
+          wasIssued,
           message:
-            '회원가입 요청이 완료되었습니다. 인사팀 승인 후 부서와 직급이 배정됩니다.',
+            result?.message ||
+            (wasIssued
+              ? '회원가입 요청이 완료되었습니다. 인사팀 승인 후 부서와 직급이 배정됩니다.'
+              : '미발급 사번으로 회원가입이 요청되었습니다. 인사팀 승인 시 별도 확인이 필요합니다.'),
         },
       });
     } catch (submitError) {
@@ -113,8 +119,7 @@ export default function Register() {
             사원 계정 회원가입
           </h1>
           <p className="mt-4 text-sm leading-6 text-indigo-50">
-            <strong>인사팀 사번 생성기에서 발급된 사번</strong>으로만 가입할 수
-            있습니다. 가입 시 기본 인적 정보만 입력하고, 인사팀이 승인한 뒤
+            기본 인적 정보만 입력하면 가입할 수 있습니다. 인사팀이 승인한 뒤
             부서와 직급을 배정합니다.
           </p>
 
@@ -124,7 +129,7 @@ export default function Register() {
                 필수 입력
               </p>
               <p className="mt-2 text-sm text-white/90">
-                발급된 사번, 이름, 이메일, 전화번호, 비밀번호, 비밀번호 확인
+                사번, 이름, 이메일, 전화번호, 비밀번호, 비밀번호 확인
               </p>
             </div>
 
@@ -179,7 +184,7 @@ export default function Register() {
                   className={FIELD_CLASSNAME}
                 />
                 <p className="mt-1.5 text-xs text-gray-500">
-                  안내받은 사번을 입력하세요.
+                  사번을 입력하세요.
                 </p>
               </label>
 
@@ -291,13 +296,13 @@ export default function Register() {
 
             {passwordMismatch ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                비밀번호와 비밀번호 확인이 일치해야 합니다.
+                비밀번호가 일치하지 않습니다.
               </div>
             ) : null}
 
             {birthDateInvalid ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                생년월일은 `YYYYMMDD` 형식의 8자리 숫자로 입력해 주세요.
+                생년월일은 'YYYYMMDD' 형식의 8자리 숫자로 입력해 주세요.
               </div>
             ) : null}
 

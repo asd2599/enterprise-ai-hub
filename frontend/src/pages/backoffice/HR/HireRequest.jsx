@@ -144,9 +144,7 @@ export default function HireRequest() {
             채용 요청서 작성
           </h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-            각 부서에서 필요한 인력 정보를 등록하면 인사팀 알림에 즉시 반영되고,
-            채용 공고 생성기에서 해당 요청서를 불러와 공고 초안을 만들 수
-            있습니다.
+            각 부서에서 필요한 인력 정보를 등록하면 인사팀이 채용 공고 생성기에서 해당 요청서의 공고 초안을 만들 수 있습니다.
           </p>
         </div>
 

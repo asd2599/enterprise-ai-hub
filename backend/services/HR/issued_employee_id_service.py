@@ -1,6 +1,4 @@
 """
-인사팀 발급 사번 — DB 보조 및 검증 (회원가입 시 발급된 사번만 허용)
-
 형식: 입사부서코드(3자)+년도(2자리) + ASCII 하이픈(-) + 일련(3자리)+랜덤(2자리). 구분자는 U+002D 만 사용.
 예: BHR26-00047
 화면 일련번호(3자리)는 000~999 순환(첫 발급 000). 전역 발급 카운터(next_seq)는 단조 증가하며, 미사용 행 삭제 시 롤백되지 않음.
@@ -84,9 +82,10 @@ def ensure_issued_ids_table(cur) -> None:
         INSERT INTO hr_issued_employee_ids (employee_id, issued_at, used_at)
         SELECT e.employee_id, e.created_at, e.created_at
         FROM info_employees e
-        WHERE NOT EXISTS (
-          SELECT 1 FROM hr_issued_employee_ids h WHERE h.employee_id = e.employee_id
-        )
+        WHERE e.is_verified = TRUE
+          AND NOT EXISTS (
+            SELECT 1 FROM hr_issued_employee_ids h WHERE h.employee_id = e.employee_id
+          )
         """
     )
 
