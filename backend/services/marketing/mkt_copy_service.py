@@ -67,7 +67,7 @@ def generate_copy(
         model="gpt-4o-mini",
         response_format={"type": "json_object"},
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=1000,
+        max_tokens=2000,
     )
 
     data = json.loads(res.choices[0].message.content)

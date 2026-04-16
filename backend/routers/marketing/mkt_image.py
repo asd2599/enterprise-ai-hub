@@ -1,6 +1,7 @@
 """
 마케팅 캠페인 이미지 생성 라우터 — /api/marketing/image/*
 """
+import urllib.parse
 import httpx
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -70,10 +71,15 @@ def image_download(
     except Exception:
         raise HTTPException(status_code=502, detail="이미지 다운로드에 실패했습니다.")
 
+    # RFC 5987 인코딩 — 한글 파일명 포함 모든 유니코드 지원
+    encoded_name = urllib.parse.quote(filename.encode("utf-8"), safe="")
+    content_disposition = (
+        f"attachment; filename=\"campaign_image.png\"; "
+        f"filename*=UTF-8''{encoded_name}"
+    )
+
     return StreamingResponse(
         iter([resp.content]),
         media_type="image/png",
-        headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
-        },
+        headers={"Content-Disposition": content_disposition},
     )
