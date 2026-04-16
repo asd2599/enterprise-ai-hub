@@ -2,10 +2,8 @@
 Enterprise AI Hub — FastAPI 앱 진입점
 실행: uvicorn main:app --reload
 """
-import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from config import settings
 from routers.finance import router as finance_router
 from routers.auth import router as auth_router
@@ -30,9 +28,6 @@ from routers.dev.dev_log import router as dev_log_router
 from routers.dev.dev_docs import router as dev_docs_router
 from routers.dev.dev_release import router as dev_release_router
 from routers.dev.dev_translate import router as dev_translate_router
-
-# 업로드 폴더 보장
-os.makedirs("uploads", exist_ok=True)
 
 app = FastAPI(title="Enterprise AI Hub API")
 
@@ -69,10 +64,6 @@ app.include_router(dev_docs_router,        prefix="/api/dev/docs",              
 app.include_router(dev_release_router,     prefix="/api/dev/release",            tags=["dev"])
 app.include_router(dev_translate_router,   prefix="/api/dev/translate",          tags=["dev"])
 app.include_router(strategy_router,        prefix="/api/strategy",               tags=["strategy"])
-
-
-# 업로드 이미지 정적 서빙
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 @app.get("/")

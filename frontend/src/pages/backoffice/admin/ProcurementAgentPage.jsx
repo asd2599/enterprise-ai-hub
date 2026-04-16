@@ -521,15 +521,21 @@ export default function ProcurementAgentPage() {
 
     const controller = streamProcurementAgent(msg, department, {
       onToolStart: (event) => {
-        setSteps(prev => [
-          ...prev,
-          { id: `${event.tool}-${Date.now()}`, tool: event.tool, args: event.args, status: 'running', result: null },
-        ])
+        setSteps(prev => {
+          const idx = prev.findIndex(s => s.tool === event.tool)
+          if (idx !== -1) {
+            // 같은 툴이 다시 호출되면 기존 카드를 running으로 덮어씀
+            const next = [...prev]
+            next[idx] = { ...next[idx], call_id: event.call_id, args: event.args, status: 'running', result: null }
+            return next
+          }
+          return [...prev, { id: event.tool, call_id: event.call_id, tool: event.tool, args: event.args, status: 'running', result: null }]
+        })
       },
       onToolDone: (event) => {
         setSteps(prev =>
           prev.map(s =>
-            s.tool === event.tool && s.status === 'running'
+            s.tool === event.tool
               ? { ...s, status: 'done', result: event.result }
               : s,
           ),
