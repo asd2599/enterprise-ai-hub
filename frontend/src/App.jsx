@@ -1,5 +1,5 @@
 // 앱 루트 — React Router 라우팅 구조 정의
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { getAuthSession } from './api/auth';
 
 // 재무팀 전용 라우터 가드 — department가 '재무/회계팀' 또는 '재무팀'이거나 position이 '대표이사'인 경우만 허용
@@ -13,12 +13,33 @@ function TreasuryGuard({ children }) {
   return hasAccess ? children : <Navigate to="/backoffice/finance" replace />;
 }
 
-// 인사팀 전용 라우터 가드 — 인사(HR)팀 또는 기타(관리자)만 허용
+// 인사팀 전용 라우터 가드 — 인사(HR)팀 또는 기타(관리자)만 허용. 거부 시 접근 거부 화면 표시
+function HRAccessDenied() {
+  const navigate = useNavigate();
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
+      <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-2xl">
+        🔒
+      </div>
+      <h2 className="text-lg font-bold text-gray-900 dark:text-white">접근 권한 없음</h2>
+      <p className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+        이 페이지는 <strong>인사팀</strong> 소속 직원만 접근할 수 있습니다.
+      </p>
+      <button
+        onClick={() => navigate(-1)}
+        className="mt-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 min-h-[44px]"
+      >
+        이전 페이지로
+      </button>
+    </div>
+  );
+}
+
 function HRAdminGuard({ children }) {
   const session = getAuthSession();
   const dept = session?.employee?.department || '';
   const hasAccess = dept === '인사(HR)팀' || dept === '기타(관리자)';
-  return hasAccess ? children : <Navigate to="/backoffice/hr" replace />;
+  return hasAccess ? children : <HRAccessDenied />;
 }
 import AppLayout from './components/layout/AppLayout';
 import DashboardPage from './pages/DashboardPage';

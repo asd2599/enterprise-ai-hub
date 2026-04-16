@@ -1,4 +1,4 @@
-// 공통 헤더 컴포넌트 — 로고, 모바일 햄버거 메뉴 포함
+// 공통 헤더 컴포넌트 
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -93,30 +93,35 @@ function Header({ onMenuToggle }) {
         {/* 우측 여백 확보용 */}
         <div className="flex-1" />
 
-        {session?.employee ? (
-          <div className="flex items-center gap-2">
-            <div className="hidden rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs text-gray-600 sm:block">
-              {session.employee.name}
-              {session.employee.department
-                ? ` · ${session.employee.department}`
-                : ' · 승인 대기'}
-            </div>
+        <div className="flex items-center gap-2">
+          <span className="hidden text-xs text-gray-600 dark:text-gray-300 sm:inline">
+            {session?.employee
+              ? session.employee.is_admin
+                ? '관리자 권한 접속중'
+                : `${session.employee.name}${
+                    session.employee.department
+                      ? ` · ${session.employee.department}`
+                      : ' · 승인 대기'
+                  }`
+              : '로그인하지 않음'}
+          </span>
+          {session?.employee ? (
             <button
               type="button"
               onClick={handleLogout}
-              className="inline-flex min-h-[36px] items-center rounded-full border border-rose-200 bg-rose-50 px-4 py-1.5 text-xs font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+              className="inline-flex min-h-[36px] min-w-[88px] items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-4 py-1.5 text-xs font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
             >
               로그아웃
             </button>
-          </div>
-        ) : (
-          <Link
-            to="/login"
-            className="inline-flex min-h-[36px] items-center rounded-full border border-rose-200 bg-rose-50 px-4 py-1.5 text-xs font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
-          >
-            로그인
-          </Link>
-        )}
+          ) : (
+            <Link
+              to="/login"
+              className="inline-flex min-h-[36px] min-w-[88px] items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-4 py-1.5 text-xs font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+            >
+              로그인
+            </Link>
+          )}
+        </div>
       </div>
     </header>
   );

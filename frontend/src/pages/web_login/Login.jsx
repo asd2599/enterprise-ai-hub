@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { loginEmployee, saveAuthSession } from '../../api/auth';
+import { loginAsAdmin, loginEmployee, saveAuthSession } from '../../api/auth';
 
 const FIELD_CLASSNAME =
   'w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 placeholder:text-gray-400';
@@ -17,11 +17,21 @@ export default function Login() {
   const [successMessage, setSuccessMessage] = useState(
     location.state?.message || '',
   );
+  
+  // 발급되지 않은 사번으로 가입한 경우
+  const [isUnissuedRegister, setIsUnissuedRegister] = useState(
+    location.state?.wasIssued === false,
+  );
 
   const isDisabled = useMemo(
     () => !form.employee_id.trim() || !form.password.trim() || loading,
     [form, loading],
   );
+
+  function handleAdminLogin() {
+    loginAsAdmin();
+    navigate('/');
+  }
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -33,6 +43,7 @@ export default function Login() {
     setLoading(true);
     setError('');
     setSuccessMessage('');
+    setIsUnissuedRegister(false);
 
     try {
       const data = await loginEmployee({
@@ -102,7 +113,7 @@ export default function Login() {
               <p className="text-sm font-semibold text-blue-600">로그인</p>
               <h2 className="mt-1 text-2xl font-bold">사내 계정 접속</h2>
               <p className="mt-2 text-sm text-gray-500">
-                승인 대기 계정도 로그인 후 페이지에 들어가 볼 수 있습니다.
+                승인 대기 상태에서도 페이지 접속이 가능합니다.
               </p>
             </div>
             <Link
@@ -123,7 +134,7 @@ export default function Login() {
                 type="text"
                 value={form.employee_id}
                 onChange={handleChange}
-                placeholder="예: BHR26-00047"
+                placeholder="예: BHR26-12345"
                 className={FIELD_CLASSNAME}
               />
             </label>
@@ -143,9 +154,30 @@ export default function Login() {
             </label>
 
             {successMessage ? (
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                {successMessage}
-              </div>
+              isUnissuedRegister ? (
+                <div className="rounded-2xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+                  <div className="flex items-start gap-2">
+                    <svg
+                      className="mt-0.5 h-4 w-4 shrink-0 text-rose-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                      />
+                    </svg>
+                    <span>{successMessage}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                  {successMessage}
+                </div>
+              )
             ) : null}
 
             {error ? (
@@ -160,6 +192,18 @@ export default function Login() {
               className="flex min-h-[48px] w-full items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
               {loading ? '로그인 처리 중 ...' : '로그인'}
+            </button>
+
+            {/* 관리자 권한 즉시 접속 (모든 항목 접근 허용) */}
+            <button
+              type="button"
+              onClick={handleAdminLogin}
+              className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 text-sm font-semibold text-amber-800 transition hover:border-amber-400 hover:bg-amber-100"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              관리자 권한으로 접속
             </button>
           </form>
 

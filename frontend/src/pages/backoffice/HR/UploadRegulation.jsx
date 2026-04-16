@@ -151,8 +151,7 @@ export default function UploadRegulation() {
             규정 문서 업로드
           </h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-            인사 규정 문서를 업로드하면 챗봇이 업로드된 전체 문서를 기준으로
-            답변합니다.
+            인사 규정 문서를 업로드하면 챗봇이 업로드된 전체 문서를 기준으로 답변합니다.
           </p>
         </div>
 

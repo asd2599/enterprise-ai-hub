@@ -53,6 +53,29 @@ export function saveAuthSession(data) {
   window.dispatchEvent(new Event('auth-session-changed'))
 }
 
+// 관리자 권한 즉시 세션 — 모든 가드(인사팀/재무팀/대표이사) 통과
+export function loginAsAdmin() {
+  const adminSession = {
+    approval_status: 'approved',
+    redirectTo: '/',
+    employee: {
+      employee_id: 'ADMIN-0000',
+      name: '관리자',
+      email: 'admin@local',
+      phone_number: '',
+      birth_date: '',
+      nickname: '관리자',
+      department: '기타(관리자)',
+      position: '대표이사',
+      is_verified: true,
+      is_active: true,
+      is_admin: true,
+    },
+  }
+  saveAuthSession(adminSession)
+  return adminSession
+}
+
 export function clearAuthSession() {
   localStorage.removeItem(AUTH_STORAGE_KEY)
   window.dispatchEvent(new Event('auth-session-changed'))
@@ -84,6 +107,11 @@ export async function refreshAuthSession() {
 
   if (!employeeId) {
     return null
+  }
+
+  // 관리자 세션은 서버 동기화 대상이 아님
+  if (currentSession?.employee?.is_admin) {
+    return currentSession
   }
 
   const data = await getMyProfile(employeeId)

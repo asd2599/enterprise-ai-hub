@@ -12,6 +12,7 @@ from database import get_connection
 from services.HR.hr_notification_service import create_notification
 from services.HR.issued_employee_id_service import (
     ensure_issued_ids_table,
+    mark_employee_id_used,
     normalize_employee_id,
     release_employee_id_after_reject,
 )
@@ -326,13 +327,19 @@ def list_pending_employees():
     cur = conn.cursor()
 
     try:
+        ensure_issued_ids_table(cur)
+        conn.commit()
         cur.execute(
             """
-            SELECT employee_id, name, email, phone_number, birth_date, nickname,
-                   is_verified, is_active, created_at
-            FROM info_employees
-            WHERE is_verified = FALSE
-            ORDER BY created_at DESC
+            SELECT e.employee_id, e.name, e.email, e.phone_number, e.birth_date,
+                   e.nickname, e.is_verified, e.is_active, e.created_at,
+                   CASE WHEN h.employee_id IS NOT NULL AND h.voided_at IS NULL
+                        THEN TRUE ELSE FALSE END AS was_issued
+            FROM info_employees e
+            LEFT JOIN hr_issued_employee_ids h
+                   ON h.employee_id = e.employee_id
+            WHERE e.is_verified = FALSE
+            ORDER BY e.created_at DESC
             """
         )
         rows = cur.fetchall()
@@ -355,6 +362,7 @@ def list_pending_employees():
                 "is_verified": row[6],
                 "is_active": row[7],
                 "created_at": str(row[8]),
+                "was_issued": row[9],
             }
             for row in rows
         ],
@@ -413,6 +421,9 @@ def approve_employee(body: ApproveEmployeeRequest):
             """,
             (decided_at, row[0], row[1], row[2], row[3], row[4], row[9]),
         )
+
+        mark_employee_id_used(cur, employee_id)
+
         conn.commit()
     except HTTPException:
         conn.rollback()
