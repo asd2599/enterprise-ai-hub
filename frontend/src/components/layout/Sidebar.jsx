@@ -1,12 +1,26 @@
 // 사이드바 컴포넌트 — 카테고리 & 부서 네비게이션
+import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { CATEGORIES, COLOR_THEMES } from '../../data/departments'
+import { clearAuthSession, getAuthSession, loginAsAdmin } from '../../api/auth'
 
 function Sidebar({ isOpen, onClose }) {
   const { pathname } = useLocation()
   const segments = pathname.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean)
   const categoryId = segments[0] ?? ''
   const deptId = segments[1] ?? ''
+
+  const [session, setSession] = useState(() => getAuthSession())
+  useEffect(() => {
+    function sync() { setSession(getAuthSession()) }
+    window.addEventListener('auth-session-changed', sync)
+    return () => window.removeEventListener('auth-session-changed', sync)
+  }, [])
+  const isAdmin = Boolean(session?.employee?.is_admin)
+  function handleToggleAdmin() {
+    if (isAdmin) clearAuthSession()
+    else loginAsAdmin()
+  }
 
   return (
     <>
@@ -48,6 +62,49 @@ function Sidebar({ isOpen, onClose }) {
             </svg>
             대시보드
           </NavLink>
+
+          {/* 관리자 권한 토글 — 대시보드와 백오피스 사이 */}
+          <div className="flex items-center justify-between gap-2 px-3 py-2.5">
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              관리자 권한
+            </span>
+            <button
+              type="button"
+              role="switch"
+              onClick={handleToggleAdmin}
+              aria-checked={isAdmin}
+              aria-label="관리자 권한 토글"
+              className={[
+                'relative inline-flex h-7 w-14 shrink-0 items-center rounded-full border-2 transition-colors duration-200 focus:outline-none focus:ring-2',
+                isAdmin
+                  ? 'border-amber-500 bg-amber-500 focus:ring-amber-300'
+                  : 'border-gray-400 bg-gray-300 focus:ring-gray-300',
+              ].join(' ')}
+            >
+              <span
+                className={[
+                  'absolute left-1.5 text-[9px] font-bold tracking-tight transition-opacity',
+                  isAdmin ? 'text-white opacity-100' : 'opacity-0',
+                ].join(' ')}
+              >
+                ON
+              </span>
+              <span
+                className={[
+                  'absolute right-1.5 text-[9px] font-bold tracking-tight transition-opacity',
+                  isAdmin ? 'opacity-0' : 'text-gray-900 opacity-100',
+                ].join(' ')}
+              >
+                OFF
+              </span>
+              <span
+                className={[
+                  'inline-block h-5 w-5 transform rounded-full shadow-sm transition-transform duration-200',
+                  isAdmin ? 'translate-x-7 bg-white' : 'translate-x-0.5 bg-gray-900',
+                ].join(' ')}
+              />
+            </button>
+          </div>
 
           <div className="pt-2">
             {CATEGORIES.map(cat => {

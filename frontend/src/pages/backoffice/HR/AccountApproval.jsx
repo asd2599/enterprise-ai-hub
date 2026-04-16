@@ -273,8 +273,7 @@ export default function AccountApproval() {
                 승인 대기 목록
               </h2>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                부서와 직급을 입력한 뒤 승인하면 즉시 로그인 계정으로
-                활성화됩니다.
+                부서와 직급을 입력한 뒤 승인하면 즉시 로그인 계정으로 활성화됩니다.
               </p>
             </div>
             <button
@@ -328,11 +327,16 @@ export default function AccountApproval() {
                   !resolvedPosition;
 
                 const isEtcPosition = draft.positionType === '기타';
+                const isUnissued = item.was_issued === false;
 
                 return (
                   <div
                     key={item.employee_id}
-                    className="rounded-xl border border-gray-200 bg-gray-50 p-5 dark:border-gray-700 dark:bg-gray-800/60"
+                    className={
+                      isUnissued
+                        ? 'rounded-xl border border-rose-300 bg-rose-50 p-5 dark:border-rose-700 dark:bg-rose-900/30'
+                        : 'rounded-xl border border-gray-200 bg-gray-50 p-5 dark:border-gray-700 dark:bg-gray-800/60'
+                    }
                   >
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-start justify-between gap-3">
