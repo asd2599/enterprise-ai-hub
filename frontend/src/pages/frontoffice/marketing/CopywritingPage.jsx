@@ -1,7 +1,7 @@
 // 카피라이팅 생성 페이지
 import { useState } from 'react'
 import Breadcrumb from '../../../components/layout/Breadcrumb'
-import { generateCopy } from '../../../api/marketing'
+import { generateCopy, generateImage } from '../../../api/marketing'
 
 // ── 공통 컴포넌트 ────────────────────────────────────────────
 
@@ -40,6 +40,21 @@ function CopyButton({ text, children, className = '' }) {
   )
 }
 
+const IMAGE_STYLE_OPTIONS = [
+  { value: '모던하고 세련된', label: '모던·세련' },
+  { value: '따뜻하고 감성적인', label: '감성·따뜻' },
+  { value: '강렬하고 역동적인', label: '강렬·역동' },
+  { value: '미니멀하고 깔끔한', label: '미니멀' },
+  { value: '럭셔리하고 고급스러운', label: '럭셔리' },
+  { value: '자연친화적이고 친환경적인', label: '자연·친환경' },
+]
+
+const IMAGE_SIZE_OPTIONS = [
+  { value: '1024x1024', label: '정사각형 (1:1)', desc: 'SNS 피드' },
+  { value: '1792x1024', label: '가로형 (16:9)', desc: '배너·웹' },
+  { value: '1024x1792', label: '세로형 (9:16)', desc: '스토리·릴스' },
+]
+
 const GOAL_OPTIONS  = ['인지', '전환', '리텐션']
 const TONE_OPTIONS  = ['공식체', '친근체', 'MZ감성']
 const CHANNEL_OPTIONS = ['온라인광고', '인스타그램', '유튜브', '옥외광고', '이메일']
@@ -75,6 +90,14 @@ export default function CopywritingPage() {
   // 선택된 버전 탭
   const [activeVersion, setActiveVersion] = useState('A')
 
+  // 이미지 생성
+  const [imgStyle, setImgStyle]     = useState('모던하고 세련된')
+  const [imgSize, setImgSize]       = useState('1024x1024')
+  const [imgLoading, setImgLoading] = useState(false)
+  const [imgError, setImgError]     = useState(null)
+  const [imgResult, setImgResult]   = useState(null)
+  const [imgOpen, setImgOpen]       = useState(false) // 옵션 패널 열림 여부
+
   function toggleChannel(ch) {
     setChannels(prev =>
       prev.includes(ch) ? prev.filter(c => c !== ch) : [...prev, ch]
@@ -101,6 +124,45 @@ export default function CopywritingPage() {
       setError(e.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleImageGenerate() {
+    if (!productName.trim()) return
+    const desc = `${productName} 광고 이미지. 핵심 특장점: ${features}. 캠페인 목표: ${goal}. 톤: ${tone}.`
+    setImgLoading(true)
+    setImgError(null)
+    setImgResult(null)
+    try {
+      const data = await generateImage({
+        product_name: productName,
+        description: desc,
+        style: imgStyle,
+        size: imgSize,
+      })
+      setImgResult(data)
+    } catch (e) {
+      setImgError(e.message)
+    } finally {
+      setImgLoading(false)
+    }
+  }
+
+  async function handleImageDownload() {
+    if (!imgResult?.image_url) return
+    try {
+      const res = await fetch(imgResult.image_url)
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${productName.trim() || 'campaign'}_image.png`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch {
+      setImgError('이미지 저장에 실패했습니다. 이미지를 우클릭하여 직접 저장해 주세요.')
     }
   }
 
@@ -403,6 +465,148 @@ export default function CopywritingPage() {
               <p className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
                 {result.banner}
               </p>
+            </div>
+          )}
+
+          {/* ── 캠페인 이미지 생성 섹션 ── */}
+
+          {/* 이미지 미생성 + 로딩 아닌 상태 → 생성 버튼 */}
+          {!imgResult && !imgLoading && (
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={handleImageGenerate}
+                disabled={imgLoading}
+                className="w-full min-h-[48px] rounded-xl border-2 border-dashed border-amber-300 dark:border-amber-700
+                  hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20
+                  text-amber-600 dark:text-amber-400 text-sm font-semibold transition-colors
+                  flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                캠페인 이미지 생성
+              </button>
+              <ErrorBanner message={imgError} />
+            </div>
+          )}
+
+          {/* 이미지 로딩 */}
+          {imgLoading && (
+            <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-10 flex flex-col items-center gap-3">
+              <svg className="w-8 h-8 animate-spin text-amber-500" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+              <p className="text-sm text-gray-500 dark:text-gray-400">AI가 캠페인에 맞는 이미지를 생성하는 중...</p>
+              <p className="text-xs text-gray-300 dark:text-gray-500">약 15~30초 소요됩니다</p>
+            </div>
+          )}
+
+          {/* 이미지 결과 */}
+          {imgResult && (
+            <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex items-center gap-2">
+                <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span className="text-sm font-semibold text-gray-800 dark:text-white">캠페인 이미지</span>
+              </div>
+
+              {/* 이미지 프리뷰 */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-800/30 flex justify-center">
+                <img
+                  src={imgResult.image_url}
+                  alt={`${productName} 캠페인 이미지`}
+                  className="max-w-full h-auto rounded-lg shadow-lg"
+                  style={{ maxHeight: '500px' }}
+                />
+              </div>
+
+              <div className="p-4 flex flex-col gap-3">
+                {/* 스타일·비율 옵션 (접이식) */}
+                <button
+                  onClick={() => setImgOpen(prev => !prev)}
+                  className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors self-start"
+                >
+                  <svg className={`w-3.5 h-3.5 transition-transform ${imgOpen ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  스타일·비율 변경
+                </button>
+
+                {imgOpen && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/40">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">스타일</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {IMAGE_STYLE_OPTIONS.map(s => (
+                          <button
+                            key={s.value}
+                            onClick={() => setImgStyle(s.value)}
+                            className={`text-xs font-medium min-h-[32px] px-2.5 rounded-lg border transition-colors ${
+                              imgStyle === s.value
+                                ? 'border-amber-400 bg-amber-500 text-white'
+                                : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-amber-300'
+                            }`}
+                          >
+                            {s.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">비율</label>
+                      <div className="flex gap-1.5">
+                        {IMAGE_SIZE_OPTIONS.map(s => (
+                          <button
+                            key={s.value}
+                            onClick={() => setImgSize(s.value)}
+                            className={`flex-1 flex flex-col items-center py-2 rounded-lg border transition-colors ${
+                              imgSize === s.value
+                                ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/30'
+                                : 'border-gray-200 dark:border-gray-600 hover:border-amber-300'
+                            }`}
+                          >
+                            <span className={`text-xs font-semibold ${
+                              imgSize === s.value ? 'text-amber-600 dark:text-amber-400' : 'text-gray-700 dark:text-gray-300'
+                            }`}>{s.label}</span>
+                            <span className="text-[10px] text-gray-400">{s.desc}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 저장 / 다시 생성 버튼 */}
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={handleImageDownload}
+                    className="flex items-center justify-center gap-2 min-h-[44px] rounded-xl border-2 border-amber-400 text-amber-600 dark:text-amber-400 font-semibold text-sm hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    저장
+                  </button>
+                  <button
+                    onClick={handleImageGenerate}
+                    disabled={imgLoading}
+                    className="flex items-center justify-center gap-2 min-h-[44px] rounded-xl bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white font-semibold text-sm transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    다시 생성
+                  </button>
+                </div>
+
+                <ErrorBanner message={imgError} />
+              </div>
             </div>
           )}
         </div>
