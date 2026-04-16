@@ -18,6 +18,7 @@ from routers.CS.cs_policy import router as cs_policy_router
 from routers.marketing.mkt_copy import router as mkt_copy_router
 from routers.marketing.mkt_sns import router as mkt_sns_router
 from routers.marketing.mkt_press import router as mkt_press_router
+from routers.marketing.mkt_image import router as mkt_image_router
 from routers.legal import router as legal_router
 from routers.strategy import router as strategy_router
 from routers.procurement import router as procurement_router
@@ -56,6 +57,7 @@ app.include_router(mkt_sns_router,     prefix="/api/marketing/sns",  tags=["mark
 app.include_router(legal_router,       prefix="/api/legal",           tags=["legal"])
 app.include_router(procurement_router, prefix="/api/procurement",     tags=["procurement"])
 app.include_router(mkt_press_router,       prefix="/api/marketing/press",       tags=["marketing"])
+app.include_router(mkt_image_router,       prefix="/api/marketing/image",       tags=["marketing"])
 app.include_router(sales_proposal_router,   prefix="/api/sales/proposal",         tags=["sales"])
 app.include_router(sales_performance_router, prefix="/api/sales/performance",     tags=["sales"])
 app.include_router(sales_meeting_router,    prefix="/api/sales/meeting",          tags=["sales"])

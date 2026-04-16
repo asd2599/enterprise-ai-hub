@@ -70,6 +70,25 @@ export async function generatePress(params) {
   return handleResponse(res)
 }
 
+/**
+ * 캠페인 이미지 생성 — DALL-E 3
+ * @param {{
+ *   product_name: string,
+ *   description: string,
+ *   style?: string,
+ *   size?: '1024x1024'|'1024x1792'|'1792x1024'
+ * }} params
+ * @returns {{ image_url: string, revised_prompt: string }}
+ */
+export async function generateImage(params) {
+  const res = await fetch(`${BASE_URL}/api/marketing/image/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  })
+  return handleResponse(res)
+}
+
 export async function generateCopy(params) {
   const res = await fetch(`${BASE_URL}/api/marketing/copy/generate`, {
     method: 'POST',
