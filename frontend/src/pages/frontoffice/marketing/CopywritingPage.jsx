@@ -150,13 +150,17 @@ export default function CopywritingPage() {
 
   async function handleImageDownload() {
     if (!imgResult?.image_url) return
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+    const filename = `${productName.trim() || 'campaign'}_image.png`
+    const proxyUrl = `${baseUrl}/api/marketing/image/download?url=${encodeURIComponent(imgResult.image_url)}&filename=${encodeURIComponent(filename)}`
     try {
-      const res = await fetch(imgResult.image_url)
+      const res = await fetch(proxyUrl)
+      if (!res.ok) throw new Error()
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${productName.trim() || 'campaign'}_image.png`
+      a.download = filename
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
