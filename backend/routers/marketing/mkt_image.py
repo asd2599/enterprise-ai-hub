@@ -1,7 +1,9 @@
 """
 마케팅 캠페인 이미지 생성 라우터 — /api/marketing/image/*
 """
-from fastapi import APIRouter, HTTPException
+import httpx
+from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from services.marketing.mkt_image_service import generate_image
@@ -50,3 +52,28 @@ def image_generate(body: ImageRequest):
         raise HTTPException(status_code=502, detail=f"이미지 생성 실패: {str(e)}")
 
     return result
+
+
+# ──────────────────────────────────────────────────────────────
+# GET /api/marketing/image/download?url=...&filename=...
+# ──────────────────────────────────────────────────────────────
+@router.get("/download")
+def image_download(
+    url: str = Query(..., description="다운로드할 이미지 URL"),
+    filename: str = Query("campaign_image.png", description="저장 파일명"),
+):
+    """외부 이미지 URL을 프록시하여 브라우저에서 다운로드할 수 있도록 제공"""
+    try:
+        with httpx.Client(timeout=30) as client:
+            resp = client.get(url)
+            resp.raise_for_status()
+    except Exception:
+        raise HTTPException(status_code=502, detail="이미지 다운로드에 실패했습니다.")
+
+    return StreamingResponse(
+        iter([resp.content]),
+        media_type="image/png",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
+    )
