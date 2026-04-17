@@ -72,6 +72,45 @@ export async function rejectEmployee(employeeId, options = {}) {
 
 export { DEFAULT_REJECT_REASON }
 
+// ────────────────────────────────────────────────────────────
+// 퇴사자 관리 (Retirement)
+// ────────────────────────────────────────────────────────────
+const RETIREES_ENDPOINT = '/api/auth/retirees'
+const RESIGN_ENDPOINT = '/api/auth/resign'
+const REHIRE_ENDPOINT = '/api/auth/rehire'
+const RETIREMENT_LOG_ENDPOINT = '/api/auth/retirement-log'
+
+export async function getRetirees() {
+  const response = await apiRequest(RETIREES_ENDPOINT)
+  return response.json().catch(() => ({ total: 0, items: [] }))
+}
+
+export async function getRetirementLog() {
+  const response = await apiRequest(RETIREMENT_LOG_ENDPOINT)
+  return response.json().catch(() => ({ total: 0, items: [] }))
+}
+
+export async function resignEmployee(employeeId, reason = '') {
+  const response = await apiRequest(RESIGN_ENDPOINT, {
+    method: 'POST',
+    body: JSON.stringify({ employee_id: employeeId, reason }),
+  })
+  return response.json().catch(() => ({}))
+}
+
+export async function rehireEmployee(employeeId, payload = {}) {
+  const response = await apiRequest(REHIRE_ENDPOINT, {
+    method: 'POST',
+    body: JSON.stringify({
+      employee_id: employeeId,
+      department: payload.department || null,
+      position: payload.position || null,
+      reason: payload.reason || '',
+    }),
+  })
+  return response.json().catch(() => ({}))
+}
+
 export async function getRegulationDocuments() {
   const res = await fetch(`${BASE_URL}/api/hr/regulations`)
   return handleResponse(res)

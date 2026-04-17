@@ -9,6 +9,7 @@ from routers.finance import router as finance_router
 from routers.auth import router as auth_router
 from routers.HR.employee_management import router as hr_employee_router
 from routers.HR.issued_employee_ids import router as hr_issued_ids_router
+from routers.HR.retirement import router as hr_retirement_router
 from routers.HR.regulations import router as hr_router
 from routers.HR.recruitment import router as hr_recruitment_router
 from routers.HR.hr_evaluation import router as hr_evaluation_router
@@ -47,6 +48,7 @@ app.add_middleware(
 app.include_router(auth_router,        prefix="/api/auth",         tags=["auth"])
 app.include_router(hr_employee_router, prefix="/api/auth",         tags=["hr"])
 app.include_router(hr_issued_ids_router, prefix="/api/auth",      tags=["hr"])
+app.include_router(hr_retirement_router, prefix="/api/auth",      tags=["hr"])
 app.include_router(finance_router,     prefix="/api/finance")
 app.include_router(hr_router,          prefix="/api/hr",           tags=["hr"])
 app.include_router(hr_recruitment_router, prefix="/api/hr",        tags=["hr"])
