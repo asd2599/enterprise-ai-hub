@@ -13,36 +13,6 @@ const SUB_DEPTS = [
     ),
     badge: '에이전트 · Tool Use · 스트리밍',
   },
-  {
-    id: 'quote',
-    label: '견적서 비교 분석',
-    description: '견적서 이미지 여러 장 업로드 → AI가 가격·납기·조건 추출 후 자동 비교표 생성',
-    icon: (
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-        d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    ),
-    badge: 'Vision AI · OCR · 다중비교',
-  },
-  {
-    id: 'chat',
-    label: '구매 정책 챗봇',
-    description: '사내 구매 규정·조달 기준 문서 기반 Q&A (RAG) — 품의 기준·한도·승인 절차 조회',
-    icon: (
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-        d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-    ),
-    badge: '구매규정 · RAG · Q&A',
-  },
-  {
-    id: 'asset',
-    label: '자산 실사 보고서',
-    description: '자산 현황 입력 → AI 노후 분석 + 교체 우선순위 판단 → 실사 보고서 DOCX 생성',
-    icon: (
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-    ),
-    badge: '자산관리 · 보고서 · DOCX',
-  },
 ]
 
 export default function AdminPage() {
@@ -76,12 +46,12 @@ export default function AdminPage() {
           세부 직무를 선택하여 해당 AI 도구 페이지로 이동합니다.
         </p>
         <span className="inline-block mt-3 text-xs px-2.5 py-1 rounded-full font-medium bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
-          세부 직무 4개
+          세부 직무 1개
         </span>
       </div>
 
       {/* 세부 직무 카드 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {SUB_DEPTS.map(sub => (
           <button
             key={sub.id}
