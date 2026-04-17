@@ -47,6 +47,9 @@ class TickerSearchRequest(BaseModel):
 class FinancialDataRequest(BaseModel):
     tickers: List[str]
 
+class CompetitorSuggestRequest(BaseModel):
+    company_name: str
+
 
 @router.post("/competitor/stream")
 def competitor_stream(body: ResearchStreamRequest):
@@ -119,3 +122,53 @@ def financial_data(body: FinancialDataRequest):
     if not tickers:
         return {}
     return get_financial_data(tickers)
+
+
+@router.post("/competitor/suggest")
+def competitor_suggest(body: CompetitorSuggestRequest):
+    """회사명 기반 경쟁사 AI 추천 (GPT, 최대 5개)"""
+    import json
+    from openai import OpenAI
+    from config import settings
+
+    company = body.company_name.strip()
+    if not company:
+        raise HTTPException(status_code=400, detail="회사명을 입력해 주세요.")
+
+    client = OpenAI(api_key=settings.openai_api_key)
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "당신은 기업 전략 분석 전문가입니다. "
+                        "주어진 회사의 실제 경쟁사를 5개 추천해주세요. "
+                        "반드시 JSON 배열 형식으로만 응답하세요. "
+                        "예시: [\"삼성전자\", \"LG전자\", \"SK하이닉스\", \"인텔\", \"TSMC\"]"
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": f"'{company}'의 주요 경쟁사 5개를 JSON 배열로 추천해주세요. 회사 이름만 포함하세요.",
+                },
+            ],
+            temperature=0.3,
+            max_tokens=200,
+        )
+        content = response.choices[0].message.content.strip()
+        # 마크다운 코드블록 제거
+        if content.startswith("```"):
+            content = content.split("```")[1]
+            if content.startswith("json"):
+                content = content[4:]
+        suggestions = json.loads(content.strip())
+        if not isinstance(suggestions, list):
+            raise ValueError("배열 형식이 아닙니다.")
+        # 문자열만 필터링, 최대 5개, 자기 자신 제외
+        suggestions = [s for s in suggestions if isinstance(s, str) and s.strip() != company][:5]
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"경쟁사 추천 실패: {str(exc)}") from exc
+
+    return {"suggestions": suggestions}

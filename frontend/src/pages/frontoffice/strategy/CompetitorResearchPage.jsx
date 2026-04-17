@@ -11,6 +11,7 @@ import {
   downloadResearchPptx,
   searchTicker,
   getFinancialData,
+  suggestCompetitors,
 } from '../../../api/strategy'
 
 const ALL_CATEGORIES = ['신제품/서비스', '가격·프로모션', '인사·조직', '전략·투자']
@@ -396,8 +397,12 @@ export default function CompetitorResearchPage() {
   const [categories, setCategories]         = useState([...ALL_CATEGORIES])
 
   // ── 종목 탐색 상태 ──
-  const [tickerMap, setTickerMap]           = useState({})   // { companyName: { ticker, exchange, company_name, found } }
-  const [tickerSearching, setTickerSearching] = useState(false)
+  const [tickerMap, setTickerMap] = useState({})   // { companyName: { ticker, exchange, company_name, found } }
+
+  // ── 경쟁사 추천 상태 ──
+  const [suggestions, setSuggestions]         = useState([])   // AI 추천 경쟁사 목록
+  const [suggestLoading, setSuggestLoading]   = useState(false)
+  const [suggestBase, setSuggestBase]         = useState('')   // 추천 기준 회사명
 
   // ── 동향 리서치 상태 ──
   const [companyStatuses, setCompanyStatuses] = useState([])
@@ -418,18 +423,44 @@ export default function CompetitorResearchPage() {
 
   const abortRef = useRef(null)
 
-  // ── 회사 태그 관리 ──
-  const addCompany = useCallback(() => {
+  // ── 회사 추가 (티커 자동 탐색 + 첫 회사 시 경쟁사 추천) ──
+  const addCompany = useCallback(async () => {
     const name = companyInput.trim()
-    if (!name) return
+    if (!name || isStreaming) return
     if (companies.includes(name)) { setCompanyInput(''); return }
     if (companies.length >= 3) return
-    setCompanies(prev => [...prev, name])
+
+    const isFirst = companies.length === 0
     setCompanyInput('')
-  }, [companyInput, companies])
+    setCompanies(prev => [...prev, name])
+
+    // 티커 자동 탐색
+    setTickerMap(prev => ({ ...prev, [name]: { _searching: true } }))
+    searchTicker(name)
+      .then(result => setTickerMap(prev => ({ ...prev, [name]: result })))
+      .catch(() => setTickerMap(prev => ({ ...prev, [name]: { found: false, company_name: name, ticker: '', exchange: '' } })))
+
+    // 첫 회사 추가 시 경쟁사 AI 추천 호출
+    if (isFirst) {
+      setSuggestions([])
+      setSuggestBase(name)
+      setSuggestLoading(true)
+      suggestCompetitors(name)
+        .then(data => setSuggestions(data.suggestions ?? []))
+        .catch(() => setSuggestions([]))
+        .finally(() => setSuggestLoading(false))
+    }
+  }, [companyInput, companies, isStreaming])
 
   const removeCompany = (name) => {
-    setCompanies(prev => prev.filter(c => c !== name))
+    setCompanies(prev => {
+      const next = prev.filter(c => c !== name)
+      if (next.length === 0) {
+        setSuggestions([])
+        setSuggestBase('')
+      }
+      return next
+    })
     setTickerMap(prev => { const next = { ...prev }; delete next[name]; return next })
   }
 
@@ -443,22 +474,6 @@ export default function CompetitorResearchPage() {
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') { e.preventDefault(); addCompany() }
-  }
-
-  // ── 종목 탐색 ──
-  const handleTickerSearch = async () => {
-    if (!companies.length || tickerSearching) return
-    setTickerSearching(true)
-    try {
-      const results = await Promise.all(
-        companies.map(name => searchTicker(name).catch(() => ({ found: false, company_name: name, ticker: '', exchange: '' })))
-      )
-      const newMap = {}
-      companies.forEach((name, i) => { newMap[name] = results[i] })
-      setTickerMap(newMap)
-    } finally {
-      setTickerSearching(false)
-    }
   }
 
   // ── 리서치 시작 ──
@@ -579,65 +594,161 @@ export default function CompetitorResearchPage() {
         {/* 경쟁사 입력 */}
         <div className="mb-4">
           <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-            경쟁사 이름 <span className="text-gray-400 font-normal">(최대 3개, Enter로 추가)</span>
+            경쟁사 이름 <span className="text-gray-400 font-normal">(최대 3개)</span>
           </label>
-          <div className="flex flex-wrap gap-2 items-center min-h-[42px] px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 focus-within:border-amber-400 dark:focus-within:border-amber-500 transition-colors">
-            {companies.map(c => {
-              const ti = tickerMap[c]
-              return (
-                <span key={c} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300">
-                  {c}
-                  {ti && (
-                    ti.found
-                      ? <span className="font-mono text-[10px] text-amber-600 dark:text-amber-400 bg-amber-200 dark:bg-amber-800/60 px-1 rounded">{ti.ticker}</span>
-                      : <span className="text-[10px] text-gray-400">미상장</span>
-                  )}
-                  <button
-                    onClick={() => removeCompany(c)}
-                    disabled={isStreaming}
-                    className="hover:text-red-500 transition-colors disabled:opacity-40 flex items-center"
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </span>
-              )
-            })}
-            {companies.length < 3 && (
+
+          {/* 입력창 + 추가 버튼 */}
+          {companies.length < 3 && (
+            <div className="flex gap-2 mb-3">
               <input
                 value={companyInput}
                 onChange={e => setCompanyInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                onBlur={addCompany}
                 disabled={isStreaming}
-                placeholder={companies.length === 0 ? '예: 삼성전자, Apple, 현대차' : '회사명 입력...'}
-                className="flex-1 min-w-[120px] bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none disabled:opacity-50"
+                placeholder="회사명 입력 (예: 삼성전자, Apple)"
+                className="flex-1 min-h-[44px] rounded-lg border border-gray-300 dark:border-gray-600
+                  bg-white dark:bg-gray-800 px-4 text-sm text-gray-900 dark:text-white
+                  placeholder-gray-400 outline-none transition
+                  focus:border-amber-400 dark:focus:border-amber-500 focus:ring-2 focus:ring-amber-100 dark:focus:ring-amber-900/30
+                  disabled:opacity-50 disabled:cursor-not-allowed"
               />
-            )}
-          </div>
-
-          {/* 종목 탐색 버튼 */}
-          {companies.length > 0 && (
-            <div className="mt-2 flex items-center gap-2">
               <button
-                onClick={handleTickerSearch}
-                disabled={tickerSearching || isStreaming}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
-                  bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300
-                  hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-700 dark:hover:text-amber-300
-                  border border-gray-200 dark:border-gray-600 transition-colors disabled:opacity-50 min-h-[32px]"
+                onClick={addCompany}
+                disabled={!companyInput.trim() || isStreaming}
+                className="min-h-[44px] px-5 rounded-lg text-sm font-semibold
+                  bg-amber-500 hover:bg-amber-600 text-white transition-colors
+                  disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {tickerSearching ? <Spinner className="w-3 h-3 text-amber-500" /> : (
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-                  </svg>
-                )}
-                {tickerSearching ? '탐색 중...' : '종목 탐색'}
+                추가
               </button>
-              <span className="text-[10px] text-gray-400">
-                상장 종목 코드를 자동으로 탐색하여 재무 비교에 사용합니다
-              </span>
+            </div>
+          )}
+
+          {/* 추가된 경쟁사 목록 */}
+          {companies.length > 0 && (
+            <div className="space-y-2">
+              {companies.map((c, idx) => {
+                const ti = tickerMap[c]
+                const isSearching = ti?._searching
+                return (
+                  <div
+                    key={c}
+                    className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg
+                      border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="shrink-0 w-5 h-5 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center justify-center">
+                        {idx + 1}
+                      </span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{c}</span>
+                      {/* 티커 상태 */}
+                      {isSearching ? (
+                        <span className="flex items-center gap-1 text-xs text-gray-400">
+                          <Spinner className="w-3 h-3 text-amber-400" />
+                          종목 탐색 중...
+                        </span>
+                      ) : ti ? (
+                        ti.found ? (
+                          <span className="flex items-center gap-1">
+                            <span className="font-mono text-xs font-semibold px-1.5 py-0.5 rounded
+                              bg-amber-200 dark:bg-amber-800/60 text-amber-700 dark:text-amber-300">
+                              {ti.ticker}
+                            </span>
+                            {ti.exchange && (
+                              <span className="text-[10px] text-gray-400">{ti.exchange}</span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400 dark:text-gray-500">비상장</span>
+                        )
+                      ) : null}
+                    </div>
+                    <button
+                      onClick={() => removeCompany(c)}
+                      disabled={isStreaming}
+                      className="shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50
+                        dark:hover:bg-red-950/30 transition-colors disabled:opacity-40 min-h-[32px] min-w-[32px]
+                        flex items-center justify-center"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* 빈 상태 안내 */}
+          {companies.length === 0 && (
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              첫 번째 회사를 추가하면 AI가 경쟁사를 자동으로 추천합니다.
+            </p>
+          )}
+
+          {/* AI 경쟁사 추천 */}
+          {(suggestLoading || suggestions.length > 0) && companies.length < 3 && (
+            <div className="mt-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-950/20 px-4 py-3">
+              <div className="flex items-center gap-2 mb-2">
+                <svg className="w-3.5 h-3.5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+                <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">
+                  {suggestLoading ? `${suggestBase} 경쟁사 분석 중...` : `AI 추천 경쟁사 (${suggestBase} 기준)`}
+                </span>
+                {suggestLoading && <Spinner className="w-3 h-3 text-amber-500" />}
+              </div>
+
+              {suggestLoading ? (
+                <div className="flex gap-2 flex-wrap">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="h-8 w-20 rounded-full bg-amber-200/60 dark:bg-amber-800/40 animate-pulse" />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {suggestions
+                    .filter(s => !companies.includes(s))
+                    .map(s => (
+                      <button
+                        key={s}
+                        onClick={() => {
+                          if (companies.length >= 3 || isStreaming) return
+                          setCompanyInput(s)
+                          // 바로 addCompany 로직 실행 (input 상태 거치지 않고 직접 추가)
+                          const name = s
+                          setCompanies(prev => {
+                            if (prev.includes(name) || prev.length >= 3) return prev
+                            return [...prev, name]
+                          })
+                          setCompanyInput('')
+                          setSuggestions(prev => prev.filter(x => x !== name))
+                          setTickerMap(prev => ({ ...prev, [name]: { _searching: true } }))
+                          searchTicker(name)
+                            .then(result => setTickerMap(prev => ({ ...prev, [name]: result })))
+                            .catch(() => setTickerMap(prev => ({ ...prev, [name]: { found: false, company_name: name, ticker: '', exchange: '' } })))
+                        }}
+                        disabled={isStreaming || companies.length >= 3}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium
+                          border border-amber-300 dark:border-amber-700
+                          bg-white dark:bg-gray-900 text-amber-700 dark:text-amber-300
+                          hover:bg-amber-500 hover:text-white hover:border-amber-500
+                          dark:hover:bg-amber-600 dark:hover:text-white dark:hover:border-amber-600
+                          transition-colors min-h-[36px] disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                        </svg>
+                        {s}
+                      </button>
+                    ))
+                  }
+                  {suggestions.filter(s => !companies.includes(s)).length === 0 && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500">추천 가능한 경쟁사를 모두 추가했습니다.</p>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

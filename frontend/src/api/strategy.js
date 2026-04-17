@@ -102,6 +102,24 @@ export async function getFinancialData(tickers) {
 }
 
 /**
+ * 회사명 기반 경쟁사 AI 추천
+ * @param {string} companyName
+ * @returns {Promise<{ suggestions: string[] }>}
+ */
+export async function suggestCompetitors(companyName) {
+  const res = await fetch(`${BASE_URL}/api/strategy/competitor/suggest`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ company_name: companyName }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: '추천에 실패했습니다.' }))
+    throw new Error(err.detail || '추천에 실패했습니다.')
+  }
+  return res.json()
+}
+
+/**
  * 경쟁사 리서치 결과 PPTX 다운로드
  * @param {{ name, articles, analysis }[]} companies
  * @param {string} summary

@@ -2,10 +2,8 @@
 Enterprise AI Hub — FastAPI 앱 진입점
 실행: uvicorn main:app --reload
 """
-import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from config import settings
 from routers.finance import router as finance_router
 from routers.auth import router as auth_router
@@ -22,6 +20,7 @@ from routers.CS.cs_policy import router as cs_policy_router
 from routers.marketing.mkt_copy import router as mkt_copy_router
 from routers.marketing.mkt_sns import router as mkt_sns_router
 from routers.marketing.mkt_press import router as mkt_press_router
+from routers.marketing.mkt_image import router as mkt_image_router
 from routers.legal import router as legal_router
 from routers.strategy import router as strategy_router
 from routers.procurement import router as procurement_router
@@ -32,9 +31,6 @@ from routers.dev.dev_log import router as dev_log_router
 from routers.dev.dev_docs import router as dev_docs_router
 from routers.dev.dev_release import router as dev_release_router
 from routers.dev.dev_translate import router as dev_translate_router
-
-# 업로드 폴더 보장
-os.makedirs("uploads", exist_ok=True)
 
 app = FastAPI(title="Enterprise AI Hub API")
 
@@ -65,6 +61,7 @@ app.include_router(mkt_sns_router,     prefix="/api/marketing/sns",  tags=["mark
 app.include_router(legal_router,       prefix="/api/legal",           tags=["legal"])
 app.include_router(procurement_router, prefix="/api/procurement",     tags=["procurement"])
 app.include_router(mkt_press_router,       prefix="/api/marketing/press",       tags=["marketing"])
+app.include_router(mkt_image_router,       prefix="/api/marketing/image",       tags=["marketing"])
 app.include_router(sales_proposal_router,   prefix="/api/sales/proposal",         tags=["sales"])
 app.include_router(sales_performance_router, prefix="/api/sales/performance",     tags=["sales"])
 app.include_router(sales_meeting_router,    prefix="/api/sales/meeting",          tags=["sales"])
@@ -73,10 +70,6 @@ app.include_router(dev_docs_router,        prefix="/api/dev/docs",              
 app.include_router(dev_release_router,     prefix="/api/dev/release",            tags=["dev"])
 app.include_router(dev_translate_router,   prefix="/api/dev/translate",          tags=["dev"])
 app.include_router(strategy_router,        prefix="/api/strategy",               tags=["strategy"])
-
-
-# 업로드 이미지 정적 서빙
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 @app.get("/")

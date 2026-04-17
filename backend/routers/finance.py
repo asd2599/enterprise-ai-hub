@@ -5,13 +5,12 @@ import json
 import uuid
 from datetime import date
 from io import BytesIO
-from pathlib import Path
 from typing import Optional
 
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from fastapi import APIRouter, HTTPException, UploadFile, File, Query, Header
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 from pydantic import BaseModel
 from openai import OpenAI
 
@@ -24,9 +23,31 @@ openai_client = OpenAI(api_key=settings.openai_api_key)
 
 router = APIRouter()
 
-# 이미지 저장 경로
-UPLOAD_DIR = Path("uploads")
-UPLOAD_DIR.mkdir(exist_ok=True)
+
+def _ensure_receipt_images_table():
+    """앱 시작 시 receipt_images 테이블이 없으면 생성"""
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS receipt_images (
+                id           UUID PRIMARY KEY,
+                filename     TEXT,
+                content_type TEXT,
+                image_data   BYTEA,
+                created_at   TIMESTAMP DEFAULT NOW()
+            )
+        """)
+    finally:
+        cur.close()
+        conn.close()
+
+
+# 모듈 임포트 시점에 테이블 보장
+try:
+    _ensure_receipt_images_table()
+except Exception:
+    pass  # DB 미연결 환경에서도 임포트는 허용
 
 
 # ──────────────────────────────────────────────────────────────
@@ -68,8 +89,8 @@ class UpdateTransactionRequest(BaseModel):
 @router.post("/ocr")
 async def ocr(file: UploadFile = File(...)):
     """
-    영수증 파일을 저장하고 AI로 분석합니다. DB 저장은 하지 않습니다.
-    중복 의심 항목은 is_duplicate: true로 표시되어 반환됩니다.
+    영수증 파일을 receipt_images 테이블에 저장하고 AI로 분석합니다.
+    DB 저장은 하지 않습니다. 중복 의심 항목은 is_duplicate: true로 표시됩니다.
     """
     file_bytes = await file.read()
     content_type = file.content_type or "image/jpeg"
@@ -77,18 +98,35 @@ async def ocr(file: UploadFile = File(...)):
     if not file_bytes:
         raise HTTPException(status_code=400, detail="빈 파일입니다.")
 
-    # 이미지를 uploads/ 에 저장
-    ext = Path(file.filename or "receipt").suffix or ".jpg"
-    filename = f"{date.today()}_{uuid.uuid4().hex[:8]}{ext}"
-    save_path = UPLOAD_DIR / filename
-    save_path.write_bytes(file_bytes)
-    image_path = f"uploads/{filename}"
+    # 이미지를 receipt_images 테이블에 저장
+    image_id = str(uuid.uuid4())
+    filename = file.filename or "receipt"
+
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        cur.execute(
+            "INSERT INTO receipt_images (id, filename, content_type, image_data) VALUES (%s, %s, %s, %s)",
+            (image_id, filename, content_type, file_bytes),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"이미지 저장 실패: {str(e)}")
+    finally:
+        cur.close()
+        conn.close()
 
     # OCR 분석
     try:
         result = analyze_receipt(file_bytes, content_type)
     except Exception as e:
-        save_path.unlink(missing_ok=True)   # 분석 실패 시 이미지 삭제
+        # 분석 실패 시 저장된 이미지 롤백
+        conn2 = get_connection()
+        cur2  = conn2.cursor()
+        try:
+            cur2.execute("DELETE FROM receipt_images WHERE id = %s", (image_id,))
+        finally:
+            cur2.close()
+            conn2.close()
         raise HTTPException(status_code=502, detail=f"AI 분석 실패: {str(e)}")
 
     receipt_date = result.get("receipt_date") or str(date.today())
@@ -96,7 +134,14 @@ async def ocr(file: UploadFile = File(...)):
     items_raw    = result.get("items", [])
 
     if not items_raw:
-        save_path.unlink(missing_ok=True)
+        # 항목 인식 실패 시 이미지 롤백
+        conn3 = get_connection()
+        cur3  = conn3.cursor()
+        try:
+            cur3.execute("DELETE FROM receipt_images WHERE id = %s", (image_id,))
+        finally:
+            cur3.close()
+            conn3.close()
         raise HTTPException(status_code=422, detail="영수증에서 항목을 인식하지 못했습니다.")
 
     # 중복 탐지 — vendor + receipt_date + amount 동시 일치 여부 조회
@@ -137,10 +182,10 @@ async def ocr(file: UploadFile = File(...)):
     ]
 
     return {
-        "receipt_date":  receipt_date,
-        "vendor":        vendor,
-        "image_path":    image_path,
-        "items":         items,
+        "receipt_date":   receipt_date,
+        "vendor":         vendor,
+        "image_path":     image_id,   # UUID 문자열 (기존 필드명 유지)
+        "items":          items,
         "has_duplicates": len(dup_amounts) > 0,
     }
 
@@ -216,6 +261,83 @@ def save_transactions(body: SaveTransactionsRequest):
         conn.close()
 
     return {"saved": saved}
+
+
+# ──────────────────────────────────────────────────────────────
+# GET /api/finance/receipts/{image_id}  — DB에서 영수증 이미지 반환
+# ──────────────────────────────────────────────────────────────
+@router.get("/receipts/{image_id}")
+def get_receipt_image(image_id: str):
+    """
+    receipt_images 테이블에서 이미지를 조회해 바이너리로 반환합니다.
+    """
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        cur.execute(
+            "SELECT image_data, content_type FROM receipt_images WHERE id = %s",
+            (image_id,),
+        )
+        row = cur.fetchone()
+    finally:
+        cur.close()
+        conn.close()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="이미지를 찾을 수 없습니다.")
+
+    image_data, content_type = row
+    return Response(
+        content=bytes(image_data),
+        media_type=content_type or "image/jpeg",
+    )
+
+
+# ──────────────────────────────────────────────────────────────
+# DELETE /api/finance/transactions/{id}  — 전표 삭제
+# ──────────────────────────────────────────────────────────────
+@router.delete("/transactions/{transaction_id}")
+def delete_transaction(transaction_id: int):
+    """
+    전표를 삭제합니다. 해당 image_id를 참조하는 전표가 더 없으면
+    receipt_images도 함께 삭제합니다.
+    """
+    conn = get_connection()
+    cur  = conn.cursor()
+    try:
+        # 삭제 전 image_path(UUID) 조회
+        cur.execute(
+            "SELECT image_path FROM finance_transactions WHERE id = %s",
+            (transaction_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="전표를 찾을 수 없습니다.")
+
+        image_id = row[0]
+
+        # 전표 삭제
+        cur.execute("DELETE FROM finance_transactions WHERE id = %s", (transaction_id,))
+
+        # 동일 image_id를 참조하는 다른 전표가 없으면 이미지도 삭제
+        if image_id:
+            cur.execute(
+                "SELECT COUNT(*) FROM finance_transactions WHERE image_path = %s",
+                (image_id,),
+            )
+            ref_count = cur.fetchone()[0]
+            if ref_count == 0:
+                cur.execute("DELETE FROM receipt_images WHERE id = %s", (image_id,))
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"삭제 실패: {str(e)}")
+    finally:
+        cur.close()
+        conn.close()
+
+    return {"deleted": True}
 
 
 # ──────────────────────────────────────────────────────────────

@@ -369,7 +369,8 @@ def run_procurement_agent(message: str, department: str) -> Generator[str, None,
             except json.JSONDecodeError:
                 tool_args = {}
 
-            yield _sse("tool_start", {"tool": tool_name, "args": tool_args})
+            call_id = tool_call.id  # OpenAI 고유 툴 호출 ID
+            yield _sse("tool_start", {"tool": tool_name, "args": tool_args, "call_id": call_id})
 
             try:
                 executor = TOOL_EXECUTORS.get(tool_name)
@@ -380,7 +381,7 @@ def run_procurement_agent(message: str, department: str) -> Generator[str, None,
             except Exception as exc:
                 result = {"error": str(exc)}
 
-            yield _sse("tool_done", {"tool": tool_name, "result": result})
+            yield _sse("tool_done", {"tool": tool_name, "result": result, "call_id": call_id})
 
             messages.append({
                 "role":         "tool",
