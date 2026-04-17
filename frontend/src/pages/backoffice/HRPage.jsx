@@ -1,4 +1,4 @@
-// 인사(HR)팀 서브 대시보드 — 인사 업무 도구 선택 허브
+// 인사(HR)팀 서브 대시보드 - 인사 업무 도구 선택 허브
 import { Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Breadcrumb from '../../components/layout/Breadcrumb';
@@ -114,25 +114,6 @@ const HR_TOOLS = [
       />
     ),
   },
-  /*
-  // 면접 질문 자동생성 — /backoffice/hr/q-generate (숨김: 다시 쓸 때 주석 해제)
-  {
-    id: 'q-generate',
-    label: '면접 질문 자동 생성',
-    description:
-      '직무별 핵심 역량을 반영한 구조화된 면접 질문 세트를 생성합니다.',
-    path: '/backoffice/hr/q-generate',
-    badge: '면접 · 질문 · 역량',
-    icon: (
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={1.5}
-        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-      />
-    ),
-  },
-  */
   {
     id: 'departments',
     label: '부서',
@@ -146,6 +127,38 @@ const HR_TOOLS = [
         strokeLinejoin="round"
         strokeWidth={1.5}
         d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+      />
+    ),
+  },
+  {
+    id: 'team-eval',
+    label: '팀원 평가하기',
+    description:
+      '같은 부서 팀원의 업무 성과와 역량을 평가하고 점수를 부여합니다.',
+    path: '/backoffice/hr/team-eval',
+    badge: '팀원 · 동료 평가 · 점수',
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+      />
+    ),
+  },
+  {
+    id: 'my-evaluation',
+    label: '내 평가 결과 보고서',
+    description:
+      '본인이 받은 인사 평가 결과를 기간별로 확인하고 점수와 등급을 분석합니다.',
+    path: '/backoffice/hr/my-evaluation',
+    badge: '나의 평가 · 등급 · 점수',
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
       />
     ),
   },
@@ -165,59 +178,6 @@ const HR_TOOLS = [
       />
     ),
   },
-  /*
-  // 급여 관리 — /backoffice/hr/pay (숨김: 다시 쓸 때 주석 해제)
-  {
-    id: 'pay',
-    label: '급여 관리',
-    description:
-      '급여 정산과 지급 관련 실무를 정리하고 필요한 작업 흐름을 지원합니다.',
-    path: '/backoffice/hr/pay',
-    badge: '급여 · 정산 · 지급',
-    icon: (
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={1.5}
-        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-      />
-    ),
-  },
-  // 인재 매칭 — /backoffice/hr/match (숨김: 다시 쓸 때 주석 해제)
-  {
-    id: 'match',
-    label: '인재 매칭',
-    description:
-      '후보자 역량과 직무 요구사항을 비교해 적합한 인재를 추천합니다.',
-    path: '/backoffice/hr/match',
-    badge: '후보자 · 적합도 · 추천',
-    icon: (
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={1.5}
-        d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-      />
-    ),
-  },
-  // 온보딩 자료 자동화 — /backoffice/hr/auto-manual (숨김: 다시 쓸 때 주석 해제)
-  {
-    id: 'auto-manual',
-    label: '온보딩 자료 자동화',
-    description:
-      '신입사원 안내문과 교육 자료를 표준화된 형태로 빠르게 생성합니다.',
-    path: '/backoffice/hr/auto-manual',
-    badge: '온보딩 · 교육 · 매뉴얼',
-    icon: (
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={1.5}
-        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-      />
-    ),
-  },
-  */
 ];
 
 export default function HRPage() {
