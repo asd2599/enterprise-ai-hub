@@ -47,12 +47,22 @@ export const CATEGORIES = [
       {
         id: 'hr',
         label: '인사(HR)팀',
-        description: '채용 공고 생성 · 면접 질문 자동화 · 인사 문서 작성',
+        description: '채용 · 평가 · 규정 · 급여 등 인사 실무를 위한 AI 도구',
         tools: [
-          { id: 'hr-job-posting',   label: '채용 공고 생성기',     description: '직무 요건을 입력하면 최적화된 채용 공고를 자동 생성합니다.',      icon: 'document' },
-          { id: 'hr-interview',     label: '면접 질문 자동 생성',  description: '직무 유형에 맞는 역량 기반 면접 질문 세트를 만들어 드립니다.',   icon: 'chat' },
-          { id: 'hr-eval-report',   label: '인사 평가 보고서 작성', description: '평가 항목과 점수를 바탕으로 객관적인 평가 보고서를 작성합니다.',  icon: 'chart' },
-          { id: 'hr-onboarding',    label: '온보딩 자료 자동화',   description: '신입사원 온보딩 가이드와 교육 자료를 빠르게 생성합니다.',          icon: 'users' },
+          { id: 'hr-humanresources', label: '인사팀 알림사항', description: '인사팀 공지, 마감 일정, 운영 메모를 한 화면에서 확인합니다.', icon: 'users', path: '/backoffice/hr/humanresources' },
+          { id: 'hr-hire-create',   label: '채용 공고 생성기',       description: '직무 요건을 입력하면 최적화된 채용 공고를 자동 생성합니다.',            icon: 'document', path: '/backoffice/hr/hire-create' },
+          { id: 'hr-hire-request',  label: '채용 요청서 작성',       description: '채용 필요 인원과 요청 사유를 정리해 채용 요청서를 작성합니다.',          icon: 'edit',     path: '/backoffice/hr/hire-request' },
+          /*
+          { id: 'hr-interview',     label: '면접 질문 자동 생성',    description: '직무 유형에 맞는 역량 기반 면접 질문 세트를 만들어 드립니다.',         icon: 'chat',     path: '/backoffice/hr/q-generate' },
+          { id: 'hr-pay',           label: '급여 관리',             description: '급여 정산과 지급 관련 업무를 정리하고 필요한 문서를 준비합니다.',          icon: 'chart',    path: '/backoffice/hr/pay' },
+          { id: 'hr-match',         label: '인재 매칭',             description: '후보자 정보와 직무 요건을 비교해 적합한 인재를 빠르게 매칭합니다.',       icon: 'compare',  path: '/backoffice/hr/match' },
+          { id: 'hr-onboarding',    label: '온보딩 자료 자동화',     description: '신입사원 온보딩 가이드와 교육 자료를 빠르게 생성합니다.',                icon: 'users',    path: '/backoffice/hr/auto-manual' },
+          숨김 — HRPage·App.jsx·여기 4줄 동시에 주석 해제하면 다시 노출
+          */
+          { id: 'hr-regulation',    label: '인사 규정 챗봇',         description: '사내 인사 규정과 제도를 빠르게 조회하고 질의응답할 수 있습니다.',       icon: 'chat',     path: '/backoffice/hr/regulation-chat' },
+          { id: 'hr-departments', label: 'Departments',   description: '전체 임직원의 소속 부서를 선택한 조직으로 일괄 변경할 수 있습니다.',      icon: 'users',    path: '/backoffice/hr/departments' },
+          { id: 'hr-team-eval',     label: '팀원 평가하기',           description: '같은 부서 팀원의 업무 성과와 역량을 평가하고 점수를 부여합니다.',      icon: 'users',    path: '/backoffice/hr/team-eval' },
+          { id: 'hr-eval-report',   label: '인사 평가 보고서 작성',   description: '평가 항목과 점수를 바탕으로 객관적인 평가 보고서를 작성합니다.',        icon: 'check',    path: '/backoffice/hr/evaluate' },
         ],
       },
       {
@@ -82,10 +92,7 @@ export const CATEGORIES = [
         label: '총무/구매팀',
         description: '구매 요청 처리 · 총무 문서 자동화 · 시설 관리',
         tools: [
-          { id: 'admin-purchase',   label: '구매 요청서 자동 생성', description: '물품/서비스 구매 요청서를 표준 양식에 맞게 생성합니다.',        icon: 'document' },
-          { id: 'admin-notice',     label: '총무 공문 작성',        description: '사내 공지사항 및 공문을 목적에 맞게 자동으로 작성합니다.',      icon: 'edit' },
-          { id: 'admin-facility',   label: '시설 관리 보고서',      description: '시설 점검 결과를 정리하고 유지보수 계획서를 생성합니다.',       icon: 'chart' },
-          { id: 'admin-inventory',  label: '재고 현황 분석',        description: '재고 데이터를 분석하고 구매 시점 및 수량을 제안합니다.',        icon: 'list' },
+          { id: 'admin-agent', label: '구매 AI 에이전트',    description: '자연어 구매 요청 → 예산·공급업체·주문서까지 AI가 자동 처리합니다.', icon: 'chat',     path: '/backoffice/admin/agent' },
         ],
       },
     ],
@@ -143,48 +150,6 @@ export const CATEGORIES = [
       },
     ],
   },
-  {
-    id: 'rnd',
-    label: '기술 및 서비스',
-    sublabel: 'R&D/Product',
-    color: 'emerald',
-    description: '개발, QA, 디자인 등 제품과 기술을 담당하는 부서를 위한 AI 도구',
-    departments: [
-      {
-        id: 'dev',
-        label: '개발/IT운영팀',
-        description: '코드 리뷰 · 기술 문서 · 장애 원인 분석 · 릴리즈 노트',
-        tools: [
-          { id: 'dev-review',   label: '코드 리뷰 지원',       description: '코드를 붙여넣으면 품질·보안·성능 관점에서 리뷰 코멘트를 생성합니다.', icon: 'check' },
-          { id: 'dev-docs',     label: '기술 문서 자동화',     description: 'API 스펙, 아키텍처 설명 등 기술 문서 초안을 빠르게 작성합니다.',    icon: 'document' },
-          { id: 'dev-incident', label: '장애 원인 분석',       description: '에러 로그와 증상을 입력하면 원인과 해결 방향을 분석합니다.',          icon: 'chart' },
-          { id: 'dev-release',  label: '릴리즈 노트 생성',     description: '커밋 내역이나 변경 사항을 사용자 친화적인 릴리즈 노트로 변환합니다.', icon: 'edit' },
-        ],
-      },
-      {
-        id: 'qa',
-        label: 'QA/품질관리팀',
-        description: '테스트 케이스 생성 · 버그 리포트 자동화 · 품질 체크',
-        tools: [
-          { id: 'qa-testcase',  label: '테스트 케이스 생성',    description: '요구사항을 분석하여 체계적인 테스트 케이스 목록을 자동 생성합니다.', icon: 'list' },
-          { id: 'qa-bugreport', label: '버그 리포트 자동화',    description: '버그 현상을 입력하면 표준화된 버그 리포트 형식으로 정리합니다.',    icon: 'document' },
-          { id: 'qa-checklist', label: '품질 체크리스트',       description: '릴리즈 전 QA 체크리스트를 기능 유형에 맞게 생성합니다.',             icon: 'check' },
-          { id: 'qa-regression', label: '회귀 테스트 계획',     description: '코드 변경 범위를 분석하여 회귀 테스트 우선순위와 범위를 제안합니다.', icon: 'chart' },
-        ],
-      },
-      {
-        id: 'design',
-        label: '디자인/UX팀',
-        description: 'UX 문구 작성 · 사용자 조사 분석 · 디자인 명세 정리',
-        tools: [
-          { id: 'ux-copy',      label: 'UX 문구 작성 지원',    description: '버튼·레이블·안내 문구 등 UI 텍스트를 사용자 친화적으로 작성합니다.',  icon: 'edit' },
-          { id: 'ux-research',  label: '사용자 조사 분석',     description: '인터뷰·설문 결과를 분석하여 주요 인사이트와 패턴을 도출합니다.',     icon: 'users' },
-          { id: 'ux-spec',      label: '디자인 명세 정리',     description: '디자인 의도와 인터랙션 규칙을 개발자용 명세서로 자동 정리합니다.',    icon: 'document' },
-          { id: 'ux-a11y',      label: '접근성 검토 지원',     description: 'WCAG 기준에 따라 화면 설계의 접근성 이슈를 점검하고 개선안을 제안합니다.', icon: 'check' },
-        ],
-      },
-    ],
-  },
 ]
 
 // O(1) 조회용 맵
@@ -196,3 +161,39 @@ CATEGORIES.forEach(cat => {
     DEPT_MAP[dept.id] = { ...dept, categoryId: cat.id, categoryLabel: cat.label, color: cat.color }
   })
 })
+
+/** 사번 발급 입사 부서 코드 — DEPT_MAP id ↔ 코드 (메인 대시보드 부서 순서 유지) */
+export const DEPT_ID_TO_ISSUE_CODE = {
+  hr: 'BHR',
+  finance: 'BFI',
+  legal: 'BLG',
+  admin: 'BGA',
+  strategy: 'FST',
+  sales: 'FSL',
+  marketing: 'FMK',
+  cs: 'FCS',
+}
+
+/** 메인 대시보드(CATEGORIES)와 동일한 부서 코드 정렬 순서 (마지막: 기타) */
+export const DASHBOARD_ISSUE_CODE_ORDER = [
+  ...CATEGORIES.flatMap((cat) =>
+    cat.departments.map((d) => DEPT_ID_TO_ISSUE_CODE[d.id]),
+  ),
+  'XYZ',
+]
+
+/** 입사 부서 코드 → 대시보드 부서 카드와 동일한 팀명 (각 부서 `label`) */
+export const ISSUE_CODE_TO_LABEL = {
+  ...Object.fromEntries(
+    CATEGORIES.flatMap((cat) =>
+      cat.departments.map((d) => [DEPT_ID_TO_ISSUE_CODE[d.id], d.label]),
+    ),
+  ),
+  XYZ: '기타(관리자)',
+}
+
+/** 계정 승인 / 부서 변경에서 선택 가능한 부서명 목록 (대시보드 순서 + 기타(관리자) 마지막) */
+export const DEPT_LABEL_OPTIONS = [
+  ...CATEGORIES.flatMap((cat) => cat.departments.map((d) => d.label)),
+  ISSUE_CODE_TO_LABEL.XYZ,
+]

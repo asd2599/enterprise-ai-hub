@@ -2,7 +2,7 @@
 
 FE: Vite, React (Functional), TailwindCSS
 BE: FastAPI (Python)
-AI: Claude API (claude-sonnet-4-20250514) with Streaming
+AI: OpenAI API (gpt-4o-mini)
 
 ## Core Rules
 

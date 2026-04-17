@@ -1,0 +1,26 @@
+[
+  {
+    "id": "3ba957ec",
+    "company_name": "(주)쪼코",
+    "meeting_date": "2026-04-14",
+    "opportunity_name": "TechBridge-NovaSoft 파트너십",
+    "stage": "니즈 분석",
+    "next_step": "다음 미팅 일정 조율 및 관련 문서 준비.",
+    "contact_role": "파트너십 매니저",
+    "description": "NovaSoft와의 파트너십 킥오프 미팅에서 API 연동 방식, 리셀러 마진 구조, 파일럿 프로젝트 일정 등에 대해 논의하였습니다. 상호 협력 가능성이 높아 보이며, 추가적인 논의가 필요한 상태입니다.",
+    "owner_id": "EMP-2026-1000",
+    "owner_name": "마바사",
+    "created_at": "2026-04-14T16:59:17"
+  },
+  {
+    "id": "2c1fff67",
+    "company_name": "(주)주전자",
+    "meeting_date": "2026-04-10",
+    "opportunity_name": "주전자 솔루션 통합",
+    "stage": "니즈 분석",
+    "next_step": "파트너 계약서 초안을 공유하고 추가 논의를 진행할 예정.",
+    "contact_role": "영업 이사",
+    "description": "TechBridge와 NovaSoft 간의 솔루션 통합 가능성과 리셀러 파트너십 구조에 대해 논의한 미팅입니다. 리셀러 마진 구조에 대한 추가 검토 필요성과 파일럿 프로젝트를 위한 고객사 선정에 대한 논의가 있었습니다.",
+    "created_at": "2026-04-14T16:42:53"
+  }
+]

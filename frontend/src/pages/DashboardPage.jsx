@@ -1,4 +1,4 @@
-// 메인 대시보드 — 3개 카테고리 카드 표시
+// 메인 대시보드 — 2개 카테고리 카드 표시
 import { useNavigate } from 'react-router-dom'
 import { CATEGORIES, COLOR_THEMES } from '../data/departments'
 
@@ -39,8 +39,8 @@ function DashboardPage() {
       {/* 통계 요약 */}
       <div className="grid grid-cols-3 gap-4 mb-8">
         {[
-          { label: '카테고리', value: '3' },
-          { label: '지원 부서', value: '11' },
+          { label: '카테고리', value: '2' },
+          { label: '지원 부서', value: '8' },
           { label: 'AI 도구', value: '준비 중' },
         ].map(stat => (
           <div
