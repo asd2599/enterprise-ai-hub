@@ -1,5 +1,5 @@
 """
-Enterprise AI Hub — FastAPI 앱 진입점
+Flowfit — FastAPI 앱 진입점
 실행: uvicorn main:app --reload
 """
 from fastapi import FastAPI
