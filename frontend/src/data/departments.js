@@ -61,6 +61,7 @@ export const CATEGORIES = [
           */
           { id: 'hr-regulation',    label: '인사 규정 챗봇',         description: '사내 인사 규정과 제도를 빠르게 조회하고 질의응답할 수 있습니다.',       icon: 'chat',     path: '/backoffice/hr/regulation-chat' },
           { id: 'hr-departments', label: 'Departments',   description: '전체 임직원의 소속 부서를 선택한 조직으로 일괄 변경할 수 있습니다.',      icon: 'users',    path: '/backoffice/hr/departments' },
+          { id: 'hr-team-eval',     label: '팀원 평가하기',           description: '같은 부서 팀원의 업무 성과와 역량을 평가하고 점수를 부여합니다.',      icon: 'users',    path: '/backoffice/hr/team-eval' },
           { id: 'hr-eval-report',   label: '인사 평가 보고서 작성',   description: '평가 항목과 점수를 바탕으로 객관적인 평가 보고서를 작성합니다.',        icon: 'check',    path: '/backoffice/hr/evaluate' },
         ],
       },

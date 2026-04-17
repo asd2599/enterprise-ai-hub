@@ -220,3 +220,136 @@ export async function deleteIssuedEmployeeId(employeeId) {
   })
   return response.json().catch(() => ({}))
 }
+
+
+// ────────────────────────────────────────────────────────────
+// 인사 평가 (HR Evaluation)
+// ────────────────────────────────────────────────────────────
+
+const EVAL_BASE = '/api/hr/evaluation'
+
+export async function getEvalDepartments() {
+  const res = await fetch(`${BASE_URL}${EVAL_BASE}/departments`)
+  return handleResponse(res)
+}
+
+export async function getEvalEmployees(department = '') {
+  const qs = department ? `?department=${encodeURIComponent(department)}` : ''
+  const res = await fetch(`${BASE_URL}${EVAL_BASE}/employees${qs}`)
+  return handleResponse(res)
+}
+
+export async function listEvalPeriods(evalType = '') {
+  const qs = evalType ? `?eval_type=${encodeURIComponent(evalType)}` : ''
+  const res = await fetch(`${BASE_URL}${EVAL_BASE}/periods${qs}`)
+  return handleResponse(res)
+}
+
+export async function fetchAutoData(department, startDate, endDate) {
+  const qs = `?department=${encodeURIComponent(department)}&start_date=${startDate}&end_date=${endDate}`
+  const res = await fetch(`${BASE_URL}${EVAL_BASE}/auto-data${qs}`)
+  return handleResponse(res)
+}
+
+export async function saveEvaluation(payload) {
+  const res = await fetch(`${BASE_URL}${EVAL_BASE}/entry`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  return handleResponse(res)
+}
+
+export async function fetchEvaluation(evalKey) {
+  const res = await fetch(`${BASE_URL}${EVAL_BASE}/entry/${encodeURIComponent(evalKey)}`)
+  return handleResponse(res)
+}
+
+export async function deleteEvaluation(evalKey) {
+  const res = await fetch(`${BASE_URL}${EVAL_BASE}/entry/${encodeURIComponent(evalKey)}`, {
+    method: 'DELETE',
+  })
+  return handleResponse(res)
+}
+
+export async function analyzeEvaluation(payload) {
+  const res = await fetch(`${BASE_URL}${EVAL_BASE}/analyze`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  return handleResponse(res)
+}
+
+export async function publishEvaluation(evalKey) {
+  const res = await fetch(`${BASE_URL}${EVAL_BASE}/publish/${encodeURIComponent(evalKey)}`, {
+    method: 'POST',
+  })
+  return handleResponse(res)
+}
+
+export async function getMyEvaluations(employeeId = '', employeeName = '') {
+  const params = new URLSearchParams()
+  if (employeeId) params.set('employee_id', employeeId)
+  if (employeeName) params.set('employee_name', employeeName)
+  const res = await fetch(`${BASE_URL}${EVAL_BASE}/my?${params.toString()}`)
+  return handleResponse(res)
+}
+
+export async function downloadEvalExcel(evalKey, department = '') {
+  const qs = department ? `?department=${encodeURIComponent(department)}` : ''
+  const res = await fetch(`${BASE_URL}${EVAL_BASE}/export/${encodeURIComponent(evalKey)}${qs}`)
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: '다운로드 실패' }))
+    throw new Error(err.detail || `HTTP ${res.status}`)
+  }
+  const blob = await res.blob()
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `hr_evaluation_${evalKey}.xlsx`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  window.URL.revokeObjectURL(url)
+}
+
+
+// ────────────────────────────────────────────────────────────
+// 팀원 평가 (Team Evaluation)
+// ────────────────────────────────────────────────────────────
+
+const TEAM_EVAL_BASE = '/api/hr/team-eval'
+
+export async function getTeamMembers(evaluatorId, department) {
+  const qs = `?evaluator_id=${encodeURIComponent(evaluatorId)}&department=${encodeURIComponent(department)}`
+  const res = await fetch(`${BASE_URL}${TEAM_EVAL_BASE}/members${qs}`)
+  return handleResponse(res)
+}
+
+export async function submitTeamEval(payload) {
+  const res = await fetch(`${BASE_URL}${TEAM_EVAL_BASE}/submit`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  return handleResponse(res)
+}
+
+export async function getMyTeamEvaluations(evaluatorId, evalYear, evalQuarter) {
+  const qs = `?evaluator_id=${encodeURIComponent(evaluatorId)}&eval_year=${evalYear}&eval_quarter=${evalQuarter}`
+  const res = await fetch(`${BASE_URL}${TEAM_EVAL_BASE}/my${qs}`)
+  return handleResponse(res)
+}
+
+export async function getTeamEvalSummary(department, evalYear, evalQuarter) {
+  const qs = `?department=${encodeURIComponent(department)}&eval_year=${evalYear}&eval_quarter=${evalQuarter}`
+  const res = await fetch(`${BASE_URL}${TEAM_EVAL_BASE}/summary${qs}`)
+  return handleResponse(res)
+}
+
+export async function getMyReceivedEvaluations(targetName, evalYear, evalQuarter) {
+  const qs = `?target_name=${encodeURIComponent(targetName)}&eval_year=${evalYear}&eval_quarter=${evalQuarter}`
+  const res = await fetch(`${BASE_URL}${TEAM_EVAL_BASE}/received${qs}`)
+  return handleResponse(res)
+}

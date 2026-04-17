@@ -55,17 +55,15 @@ import LegalPage from './pages/backoffice/LegalPage';
 import AdminPage from './pages/backoffice/AdminPage';
 import HireCreate from './pages/backoffice/HR/HireCreate';
 import HireRequest from './pages/backoffice/HR/HireRequest';
-import QGenerate from './pages/backoffice/HR/QGenerate';
 import RegulationChat from './pages/backoffice/HR/RegulationChat';
 import UploadRegulation from './pages/backoffice/HR/UploadRegulation';
-import Pay from './pages/backoffice/HR/Pay';
 import HumanResources from './pages/backoffice/HR/HumanResources';
 import AccountApproval from './pages/backoffice/HR/AccountApproval';
 import EmployeeIdGenerator from './pages/backoffice/HR/EmployeeIdGenerator';
 import Departments from './pages/backoffice/HR/Departments';
-import Match from './pages/backoffice/HR/Match';
 import Evaluate from './pages/backoffice/HR/Evaluate';
-import AutoManual from './pages/backoffice/HR/AutoManual';
+import TeamEval from './pages/backoffice/HR/TeamEval';
+import MyEvaluation from './pages/backoffice/HR/MyEvaluation';
 
 // 재무본부 세부 직무
 import AccountantPage from './pages/backoffice/finance/AccountantPage';
@@ -124,16 +122,14 @@ function App() {
           <Route path="backoffice/hr/hire-request" element={<HireRequest />} />
           <Route path="backoffice/hr/regulation-chat" element={<RegulationChat />} />
           <Route path="backoffice/hr/hire-create" element={<HRAdminGuard><HireCreate /></HRAdminGuard>} />
-          <Route path="backoffice/hr/q-generate" element={<HRAdminGuard><QGenerate /></HRAdminGuard>} />
           <Route path="backoffice/hr/upload-regulation" element={<HRAdminGuard><UploadRegulation /></HRAdminGuard>} />
-          <Route path="backoffice/hr/pay" element={<HRAdminGuard><Pay /></HRAdminGuard>} />
           <Route path="backoffice/hr/humanresources" element={<HRAdminGuard><HumanResources /></HRAdminGuard>} />
           <Route path="backoffice/hr/account-approval" element={<HRAdminGuard><AccountApproval /></HRAdminGuard>} />
           <Route path="backoffice/hr/employee-id-generator" element={<HRAdminGuard><EmployeeIdGenerator /></HRAdminGuard>} />
           <Route path="backoffice/hr/departments" element={<HRAdminGuard><Departments /></HRAdminGuard>} />
-          <Route path="backoffice/hr/match" element={<HRAdminGuard><Match /></HRAdminGuard>} />
           <Route path="backoffice/hr/evaluate" element={<HRAdminGuard><Evaluate /></HRAdminGuard>} />
-          <Route path="backoffice/hr/auto-manual" element={<HRAdminGuard><AutoManual /></HRAdminGuard>} />
+          <Route path="backoffice/hr/team-eval" element={<TeamEval />} />
+          <Route path="backoffice/hr/my-evaluation" element={<MyEvaluation />} />
           {/* 법무/컴플라이언스팀 — 서브 대시보드 + 세부 직무 */}
           <Route path="backoffice/legal" element={<LegalPage />} />
           <Route path="backoffice/legal/review" element={<ContractReviewPage />} />
