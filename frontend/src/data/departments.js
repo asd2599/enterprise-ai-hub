@@ -93,9 +93,6 @@ export const CATEGORIES = [
         description: '구매 요청 처리 · 총무 문서 자동화 · 시설 관리',
         tools: [
           { id: 'admin-agent', label: '구매 AI 에이전트',    description: '자연어 구매 요청 → 예산·공급업체·주문서까지 AI가 자동 처리합니다.', icon: 'chat',     path: '/backoffice/admin/agent' },
-          { id: 'admin-quote', label: '견적서 비교 분석',    description: '견적서 이미지 여러 장을 업로드하면 AI가 조건을 비교표로 정리합니다.', icon: 'compare',  path: '/backoffice/admin/quote' },
-          { id: 'admin-chat',  label: '구매 정책 챗봇',      description: '사내 구매 규정 기반 Q&A — 품의 기준·한도·승인 절차를 조회합니다.',   icon: 'document', path: '/backoffice/admin/chat'  },
-          { id: 'admin-asset', label: '자산 실사 보고서',    description: '자산 현황을 분석하고 교체 우선순위와 실사 보고서를 자동 생성합니다.', icon: 'chart',    path: '/backoffice/admin/asset' },
         ],
       },
     ],
@@ -153,49 +150,6 @@ export const CATEGORIES = [
       },
     ],
   },
-  {
-    id: 'rnd',
-    label: '기술 및 서비스',
-    sublabel: 'R&D/Product',
-    color: 'emerald',
-    description: '개발, QA, 디자인 등 제품과 기술을 담당하는 부서를 위한 AI 도구',
-    departments: [
-      {
-        id: 'dev',
-        label: '개발/IT운영팀',
-        description: '코드 리뷰 · 기술 문서 · 장애 원인 분석 · 릴리즈 노트',
-        tools: [
-          { id: 'dev-review',    label: '코드 리뷰 지원',       description: '코드를 붙여넣으면 품질·보안·성능 관점에서 리뷰 코멘트를 생성합니다.', icon: 'check' },
-          { id: 'dev-docs',      label: '인프라 문서 챗봇',     description: '운영 매뉴얼·아키텍처 문서를 업로드하면 질의응답으로 빠르게 정보를 찾습니다.', icon: 'document', path: '/rnd/dev/dev-docs', disabled: true },
-          { id: 'dev-incident',  label: '장애 로그 분석',       description: '에러 로그·스택트레이스를 붙여넣으면 근본 원인과 조치 방안을 분석합니다.', icon: 'chart', path: '/rnd/dev/log-analysis' },
-          { id: 'dev-release',   label: '릴리즈 노트 생성',     description: '커밋 메시지를 붙여넣으면 대상 독자에 맞는 릴리즈 노트를 자동 생성합니다.', icon: 'edit', path: '/rnd/dev/release-note', disabled: true },
-          { id: 'dev-translate', label: '기술 용어 번역기',     description: '개발자 언어를 기획자·임원·영업팀이 이해할 수 있는 비즈니스 언어로 번역합니다.', icon: 'compare', path: '/rnd/dev/tech-translate' },
-        ],
-      },
-      {
-        id: 'qa',
-        label: 'QA/품질관리팀',
-        description: '테스트 케이스 생성 · 버그 리포트 자동화 · 품질 체크',
-        tools: [
-          { id: 'qa-testcase',  label: '테스트 케이스 생성',    description: '요구사항을 분석하여 체계적인 테스트 케이스 목록을 자동 생성합니다.', icon: 'list' },
-          { id: 'qa-bugreport', label: '버그 리포트 자동화',    description: '버그 현상을 입력하면 표준화된 버그 리포트 형식으로 정리합니다.',    icon: 'document' },
-          { id: 'qa-checklist', label: '품질 체크리스트',       description: '릴리즈 전 QA 체크리스트를 기능 유형에 맞게 생성합니다.',             icon: 'check' },
-          { id: 'qa-regression', label: '회귀 테스트 계획',     description: '코드 변경 범위를 분석하여 회귀 테스트 우선순위와 범위를 제안합니다.', icon: 'chart' },
-        ],
-      },
-      {
-        id: 'design',
-        label: '디자인/UX팀',
-        description: 'UX 문구 작성 · 사용자 조사 분석 · 디자인 명세 정리',
-        tools: [
-          { id: 'ux-copy',      label: 'UX 문구 작성 지원',    description: '버튼·레이블·안내 문구 등 UI 텍스트를 사용자 친화적으로 작성합니다.',  icon: 'edit' },
-          { id: 'ux-research',  label: '사용자 조사 분석',     description: '인터뷰·설문 결과를 분석하여 주요 인사이트와 패턴을 도출합니다.',     icon: 'users' },
-          { id: 'ux-spec',      label: '디자인 명세 정리',     description: '디자인 의도와 인터랙션 규칙을 개발자용 명세서로 자동 정리합니다.',    icon: 'document' },
-          { id: 'ux-a11y',      label: '접근성 검토 지원',     description: 'WCAG 기준에 따라 화면 설계의 접근성 이슈를 점검하고 개선안을 제안합니다.', icon: 'check' },
-        ],
-      },
-    ],
-  },
 ]
 
 // O(1) 조회용 맵
@@ -218,9 +172,6 @@ export const DEPT_ID_TO_ISSUE_CODE = {
   sales: 'FSL',
   marketing: 'FMK',
   cs: 'FCS',
-  dev: 'RDE',
-  qa: 'RQA',
-  design: 'RDS',
 }
 
 /** 메인 대시보드(CATEGORIES)와 동일한 부서 코드 정렬 순서 (마지막: 기타) */

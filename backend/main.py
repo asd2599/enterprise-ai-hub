@@ -33,7 +33,7 @@ from routers.dev.dev_docs import router as dev_docs_router
 from routers.dev.dev_release import router as dev_release_router
 from routers.dev.dev_translate import router as dev_translate_router
 
-app = FastAPI(title="Enterprise AI Hub API")
+app = FastAPI(title="Flowfit API")
 
 # CORS — Frontend 도메인만 허용
 app.add_middleware(
@@ -76,7 +76,7 @@ app.include_router(strategy_router,        prefix="/api/strategy",              
 
 @app.get("/")
 def root():
-    return {"status": "ok", "message": "Enterprise AI Hub API가 실행 중입니다."}
+    return {"status": "ok", "message": "Flowfit API가 실행 중입니다."}
 
 
 @app.get("/health")

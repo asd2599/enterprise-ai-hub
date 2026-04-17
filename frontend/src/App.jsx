@@ -78,18 +78,15 @@ import LegalChatPage from "./pages/backoffice/legal/LegalChatPage";
 
 // 총무/구매팀 세부 직무
 import ProcurementAgentPage from './pages/backoffice/admin/ProcurementAgentPage';
-import QuoteComparePage     from './pages/backoffice/admin/QuoteComparePage';
-import ProcurementChatPage  from './pages/backoffice/admin/ProcurementChatPage';
-import AssetReportPage      from './pages/backoffice/admin/AssetReportPage';
 
 // Front-Office
 import StrategyPage from "./pages/frontoffice/StrategyPage";
 import CompetitorResearchPage from "./pages/frontoffice/strategy/CompetitorResearchPage";
 import SalesPage from "./pages/frontoffice/SalesPage";
 import MarketingPage from "./pages/frontoffice/MarketingPage";
-import CopywritingPage from "./pages/frontoffice/Marketing/CopywritingPage";
-import SnsPage from "./pages/frontoffice/Marketing/SnsPage";
-import PressPage from "./pages/frontoffice/Marketing/PressPage";
+import CopywritingPage from "./pages/frontoffice/marketing/CopywritingPage";
+import SnsPage from "./pages/frontoffice/marketing/SnsPage";
+import PressPage from "./pages/frontoffice/marketing/PressPage";
 import ProposalPage from "./pages/frontoffice/sales/ProposalPage";
 import PerformancePage from "./pages/frontoffice/sales/PerformancePage";
 import PerformanceEntryPage from "./pages/frontoffice/sales/PerformanceEntryPage";
@@ -99,14 +96,6 @@ import ResponseDraftPage from "./pages/frontoffice/CS/ResponseDraftPage";
 import FaqPage from "./pages/frontoffice/CS/FaqPage";
 import VocReportPage from "./pages/frontoffice/CS/VocReportPage";
 
-// R&D / Product
-import DevPage from './pages/rnd/DevPage';
-import QAPage from './pages/rnd/QAPage';
-import DesignPage from './pages/rnd/DesignPage';
-import LogAnalysis from './pages/rnd/Dev/LogAnalysis';
-import DevDocs from './pages/rnd/Dev/DevDocs';
-import ReleaseNote from './pages/rnd/Dev/ReleaseNote';
-import TechTranslate from './pages/rnd/Dev/TechTranslate';
 
 function App() {
   return (
@@ -139,9 +128,6 @@ function App() {
           <Route path="backoffice/legal/chat" element={<LegalChatPage />} />
           <Route path="backoffice/admin" element={<AdminPage />} />
           <Route path="backoffice/admin/agent" element={<ProcurementAgentPage />} />
-          <Route path="backoffice/admin/quote" element={<QuoteComparePage />} />
-          <Route path="backoffice/admin/chat"  element={<ProcurementChatPage />} />
-          <Route path="backoffice/admin/asset" element={<AssetReportPage />} />
 
           {/* 재무본부 — 서브 대시보드 + 세부 직무 */}
           <Route path="backoffice/finance" element={<FinancePage />} />
@@ -181,16 +167,7 @@ function App() {
           />
           <Route path="frontoffice/cs/faq" element={<FaqPage />} />
           <Route path="frontoffice/cs/voc" element={<VocReportPage />} />
-          {/* R&D / Product 부서 */}
-          <Route path="rnd/dev" element={<DevPage />} />
-          <Route path="rnd/dev/log-analysis" element={<LogAnalysis />} />
-          <Route path="rnd/dev/dev-docs" element={<DevDocs />} />
-          <Route path="rnd/dev/release-note" element={<ReleaseNote />} />
-          <Route path="rnd/dev/tech-translate" element={<TechTranslate />} />
-          <Route path="rnd/qa" element={<QAPage />} />
-          <Route path="rnd/design" element={<DesignPage />} />
-
-          {/* 동적 카테고리 — 위의 고정 경로보다 뒤에 두어 /backoffice/hr 등과 충돌하지 않게 함 */}
+{/* 동적 카테고리 — 위의 고정 경로보다 뒤에 두어 /backoffice/hr 등과 충돌하지 않게 함 */}
           <Route path=":categoryId" element={<CategoryPage />} />
         </Route>
       </Routes>
