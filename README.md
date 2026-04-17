@@ -80,9 +80,8 @@ python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# .env 파일 생성
+# .env 파일 생성 (아래 환경 변수 섹션 참고)
 cp .env.example .env
-# OPENAI_API_KEY, DB_HOST, DB_NAME, DB_USER, DB_PASSWORD, FRONTEND_URL 설정
 
 uvicorn main:app --reload
 ```
@@ -101,24 +100,25 @@ npm run dev
 
 ### 환경 변수
 
-**backend/.env**
+**backend/.env** — `backend/.env.example` 파일을 복사 후 실제 값으로 채워주세요.
 
-```env
-OPENAI_API_KEY=sk-...
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=enterprise_ai_hub
-DB_USER=postgres
-DB_PASSWORD=yourpassword
-FRONTEND_URL=http://localhost:5173
-PORT=8000
-```
+| 변수명 | 설명 |
+|---|---|
+| `OPENAI_API_KEY` | OpenAI API 키 |
+| `TAVILY_API_KEY` | Tavily 검색 API 키 (경쟁사 리서치) |
+| `DB_HOST` | PostgreSQL 호스트 |
+| `DB_PORT` | PostgreSQL 포트 |
+| `DB_USER` | DB 사용자명 |
+| `DB_PASSWORD` | DB 비밀번호 |
+| `DB_DATABASE` | DB 이름 |
+| `FRONTEND_URL` | 프론트엔드 주소 (CORS 허용) |
+| `APP_TIMEZONE` | 서버 타임존 (기본: Asia/Seoul) |
 
 **frontend/.env**
 
-```env
-VITE_API_BASE_URL=http://localhost:8000
-```
+| 변수명 | 설명 |
+|---|---|
+| `VITE_API_BASE_URL` | 백엔드 API 주소 |
 
 ---
 
