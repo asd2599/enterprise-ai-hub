@@ -82,11 +82,11 @@ function Header({ onMenuToggle }) {
         <a href="/" className="flex items-center gap-2.5 shrink-0">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
             <span className="text-white text-xs font-bold tracking-tight">
-              AI
+              FF
             </span>
           </div>
           <span className="text-sm font-semibold text-gray-900 dark:text-white hidden sm:block">
-            Enterprise AI Hub
+            Flowfit
           </span>
         </a>
 
