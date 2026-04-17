@@ -75,7 +75,13 @@ export default function Departments() {
     }, {});
 
     return Object.entries(summaryMap)
-      .sort((a, b) => b[1].count - a[1].count)
+      .sort((a, b) => {
+        const aIsEtc = a[0] === '기타(관리자)';
+        const bIsEtc = b[0] === '기타(관리자)';
+        if (aIsEtc && !bIsEtc) return 1;
+        if (!aIsEtc && bIsEtc) return -1;
+        return b[1].count - a[1].count;
+      })
       .map(([department, info]) => ({
         department,
         count: info.count,

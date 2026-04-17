@@ -297,7 +297,7 @@ export default function Setting() {
               disabled={saving || loading || !session?.employee?.employee_id}
               className="min-h-[44px] rounded-xl bg-fuchsia-600 px-5 text-sm font-semibold text-white transition hover:bg-fuchsia-700 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
-              {saving ? '저장 중...' : '내 정보 저장'}
+              {saving ? '저장 중 ...' : '내 정보 저장'}
             </button>
           </form>
         </section>
@@ -312,7 +312,7 @@ export default function Setting() {
 
         {loading && !successMessage ? (
           <div className="rounded-xl border border-fuchsia-100 bg-fuchsia-50 px-4 py-3 text-sm text-fuchsia-700">
-            DB에서 내 정보를 불러오는 중입니다...
+            DB에서 내 정보를 불러오는 중입니다
           </div>
         ) : null}
 
