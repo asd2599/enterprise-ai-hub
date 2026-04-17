@@ -178,6 +178,22 @@ const HR_TOOLS = [
       />
     ),
   },
+  {
+    id: 'retiree-management',
+    label: '퇴사자 관리',
+    description:
+      '퇴사 및 재입사자를 관리합니다. 재입사 시 기존 사번을 그대로 재활성화합니다.',
+    path: '/backoffice/hr/retiree-management',
+    badge: '퇴사 · 재입사 · 계정 블락',
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+      />
+    ),
+  },
 ];
 
 export default function HRPage() {

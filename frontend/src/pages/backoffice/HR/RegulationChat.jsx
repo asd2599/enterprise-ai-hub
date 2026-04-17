@@ -193,7 +193,7 @@ export default function RegulationChat() {
                         </p>
                       </div>
                       <span className="text-xs text-gray-500 dark:text-gray-400">
-                        추가 날짜: {document.uploaded_at || '-'}
+                         {document.uploaded_at || '-'}
                       </span>
                     </div>
                   ))}

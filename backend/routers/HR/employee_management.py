@@ -70,6 +70,16 @@ def _ensure_info_employees_verified_at(cur) -> None:
     )
 
 
+def _ensure_resigned_at(cur) -> None:
+    """퇴사자 관리용 resigned_at 컬럼 보장."""
+    cur.execute(
+        """
+        ALTER TABLE info_employees
+        ADD COLUMN IF NOT EXISTS resigned_at TIMESTAMPTZ
+        """
+    )
+
+
 class ApproveEmployeeRequest(BaseModel):
     employee_id: str
     department: str
@@ -170,6 +180,7 @@ def list_employees():
 
     try:
         _ensure_info_employees_verified_at(cur)
+        _ensure_resigned_at(cur)
         cur.execute(
             """
             SELECT employee_id, name, email, phone_number, birth_date, nickname,
@@ -177,6 +188,7 @@ def list_employees():
                    created_at, updated_at, verified_at
             FROM info_employees
             WHERE is_verified = TRUE
+              AND resigned_at IS NULL
             ORDER BY department ASC NULLS LAST, name ASC
             """
         )

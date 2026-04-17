@@ -64,6 +64,7 @@ import Departments from './pages/backoffice/HR/Departments';
 import Evaluate from './pages/backoffice/HR/Evaluate';
 import TeamEval from './pages/backoffice/HR/TeamEval';
 import MyEvaluation from './pages/backoffice/HR/MyEvaluation';
+import RetireeManagement from './pages/backoffice/HR/RetireeManagement';
 
 // 재무본부 세부 직무
 import AccountantPage from './pages/backoffice/finance/AccountantPage';
@@ -117,6 +118,7 @@ function App() {
           <Route path="backoffice/hr/employee-id-generator" element={<HRAdminGuard><EmployeeIdGenerator /></HRAdminGuard>} />
           <Route path="backoffice/hr/departments" element={<HRAdminGuard><Departments /></HRAdminGuard>} />
           <Route path="backoffice/hr/evaluate" element={<HRAdminGuard><Evaluate /></HRAdminGuard>} />
+          <Route path="backoffice/hr/retiree-management" element={<HRAdminGuard><RetireeManagement /></HRAdminGuard>} />
           <Route path="backoffice/hr/team-eval" element={<TeamEval />} />
           <Route path="backoffice/hr/my-evaluation" element={<MyEvaluation />} />
           {/* 법무/컴플라이언스팀 — 서브 대시보드 + 세부 직무 */}
