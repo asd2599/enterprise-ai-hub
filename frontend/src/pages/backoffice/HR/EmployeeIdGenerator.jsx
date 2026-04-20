@@ -104,6 +104,8 @@ export default function EmployeeIdGenerator() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [deleteSuccess, setDeleteSuccess] = useState('');
   const [serialPreview, setSerialPreview] = useState([]);
   const [serialPreviewLoading, setSerialPreviewLoading] = useState(false);
   const [serialPreviewTick, setSerialPreviewTick] = useState(0);
@@ -232,14 +234,14 @@ export default function EmployeeIdGenerator() {
     ) {
       return;
     }
-    setError('');
-    setSuccess('');
+    setDeleteError('');
+    setDeleteSuccess('');
     try {
       await deleteIssuedEmployeeId(row.employee_id);
-      setSuccess('삭제되었습니다.');
+      setDeleteSuccess(`사번 ${row.employee_id}이(가) 삭제되었습니다.`);
       await fetchList();
     } catch (e) {
-      setError(e.message || '삭제에 실패했습니다.');
+      setDeleteError(e.message || '삭제에 실패했습니다.');
     }
   }
 
@@ -350,7 +352,16 @@ export default function EmployeeIdGenerator() {
                 </div>
               </div>
               <div className="flex h-11 w-11 shrink-0 items-center justify-center">
-                <span className="sr-only">행 삭제</span>
+                <button
+                  type="button"
+                  onClick={addBatchRow}
+                  disabled={deptOptions.length === 0}
+                  aria-label="부서 추가"
+                  title="부서 추가"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  <IoMdAdd className="h-5 w-5 shrink-0" aria-hidden />
+                </button>
               </div>
             </div>
 
@@ -516,15 +527,6 @@ export default function EmployeeIdGenerator() {
           <div className="mt-5 flex flex-wrap items-center justify-center gap-3 border-t border-gray-200 pt-4 dark:border-gray-700">
             <button
               type="button"
-              onClick={addBatchRow}
-              disabled={deptOptions.length === 0}
-              className="inline-flex h-11 w-40 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-2 text-sm font-semibold text-gray-800 shadow-sm transition hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 dark:shadow-none"
-            >
-              <IoMdAdd className="h-5 w-5 shrink-0" aria-hidden />
-              부서 추가
-            </button>
-            <button
-              type="button"
               onClick={handleGenerate}
               disabled={
                 generating ||
@@ -539,6 +541,17 @@ export default function EmployeeIdGenerator() {
             </button>
           </div>
         </div>
+
+        {deleteError ? (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {deleteError}
+          </div>
+        ) : null}
+        {deleteSuccess ? (
+          <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">
+            {deleteSuccess}
+          </div>
+        ) : null}
 
         <div className="rounded-xl border border-gray-200 bg-gray-50 p-6 dark:border-gray-700 dark:bg-gray-900/80">
           <div className="flex flex-wrap items-center justify-between gap-3">
