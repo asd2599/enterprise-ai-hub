@@ -237,7 +237,7 @@ export default function RetireeManagement() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="사번·이름·부서·직급 검색"
+                placeholder="사번 · 이름 · 부서 · 직급 검색"
                 className="w-64 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 dark:border-gray-700 dark:bg-gray-950 dark:text-white"
               />
               <button
@@ -296,9 +296,9 @@ export default function RetireeManagement() {
                         type="button"
                         onClick={() => handleResign(emp)}
                         disabled={processingId === emp.employee_id}
-                        className="min-h-[44px] rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                        className="min-h-[44px] min-w-[80px] rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-gray-300"
                       >
-                        {processingId === emp.employee_id ? '처리 중 ...' : '퇴사 처리'}
+                        {processingId === emp.employee_id ? '· · ·' : '퇴사'}
                       </button>
                     </div>
                   </div>

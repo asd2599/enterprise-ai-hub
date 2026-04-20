@@ -154,7 +154,7 @@ export default function HireRequest() {
               요청 부서
             </p>
             <p className="text-right text-sm font-medium text-gray-900 dark:text-white">
-              {requestDepartment || '부서 배정 대기'}
+              {requestDepartment || '-'}
             </p>
           </div>
           <div className="flex items-center justify-between rounded-xl border border-blue-200 bg-white p-5 dark:border-blue-800 dark:bg-gray-900">
